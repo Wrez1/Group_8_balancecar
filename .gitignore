@@ -1,0 +1,39 @@
+# Keil MDK 垃圾文件屏蔽列表
+*.bak
+*.dep
+*.o
+*.d
+*.crf
+*.iex
+*.htm
+*.sct
+*.map
+*.lnp
+*.axf
+*.uvguix.*
+*.uvoptx
+*.scvd
+*.mcu
+JLinkLog.txt
+*.lst
+
+# 屏蔽编译输出文件夹 (最重要!)
+Objects/
+Listings/
+
+# Windows 垃圾
+Thumbs.db
+*.html
+*.
+SoftWare/.vscode/keil-assistant.log
+SoftWare/Library/components/fatfs/documents/res/app1.c
+SoftWare/Library/components/fatfs/documents/res/app2.c
+.gitignore
+SoftWare/Library/components/fatfs/documents/res/app3.c
+SoftWare/Library/components/fatfs/documents/res/app4.c
+SoftWare/Library/components/fatfs/documents/res/app5.c
+SoftWare/Library/components/fatfs/documents/res/app6.c
+SoftWare/Library/components/fatfs/documents/res/f1.png
+SoftWare/Library/components/fatfs/documents/res/f2.png
+SoftWare/Library/components/fatfs/documents/res/f3.png
+SoftWare/Library/components/fatfs/documents/res/f4.png
