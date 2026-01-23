@@ -393,6 +393,16 @@
               <FileType>5</FileType>
               <FilePath>.\HardWare\motor.h</FilePath>
             </File>
+            <File>
+              <FileName>encoder.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HardWare\encoder.c</FilePath>
+            </File>
+            <File>
+              <FileName>encoder.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HardWare\encoder.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
