@@ -3,13 +3,8 @@
 
 #define PWM_MAX 8000
 #define PWM_MIN -8000
-#define SPEED_PROTECT 200
-#define TURN_PPROTECT 6000
 // 电机的pwm是用的TIM5
 
-uint8 zebra_count;
-int zebracount = 2; // 元数次数菜单调节
-uint8 speed_over;//连续过转的毫秒数
 /**
  * @brief  电机初始化
  * @param  无
@@ -17,14 +12,11 @@ uint8 speed_over;//连续过转的毫秒数
 
 void motor_init()
 {
-	// 此处编写用户代码 例如外设初始化代码等
 	gpio_init(DIR_L, GPO, GPIO_HIGH, GPO_PUSH_PULL); // GPIO 初始化为输出 默认上拉输出高
 	pwm_init(PWM_L, 17000, 0);						 // PWM 通道初始化频率 17KHz 占空比初始为 0
 
 	gpio_init(DIR_R, GPO, GPIO_HIGH, GPO_PUSH_PULL); // GPIO 初始化为输出 默认上拉输出高
 	pwm_init(PWM_R, 17000, 0);						 // PWM 通道初始化频率 17KHz 占空比初始为 0
-													 // 此处编写用户代码 例如外设初始化代码
-	ips200_show_string(10, 160, "motor init success");
 }
 
 /**
