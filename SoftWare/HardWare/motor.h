@@ -5,11 +5,11 @@
 
 
 #define MAX_DUTY            (50 )                                               // 最大 MAX_DUTY% 占空比
-#define DIR_L               (A0 )
-#define PWM_L               (TIM5_PWM_CH2_A1)
+#define DIR_L               (B4 )
+#define PWM_L               (TIM3_PWM_CH2_B5)
 
-#define DIR_R               (A2 )
-#define PWM_R               (TIM5_PWM_CH4_A3)
+#define DIR_R               (B6 )
+#define PWM_R               (TIM4_PWM_CH2_B7)
 
 void motor_init();
 void Load(int motor1,int motor2);
