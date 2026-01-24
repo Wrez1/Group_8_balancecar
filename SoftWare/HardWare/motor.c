@@ -3,7 +3,6 @@
 
 #define PWM_MAX 8000
 #define PWM_MIN -8000
-// 电机的pwm是用的TIM5
 
 /**
  * @brief  电机初始化
