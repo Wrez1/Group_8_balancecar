@@ -3,48 +3,60 @@
 
 #define PWM_MAX 8000
 #define PWM_MIN -8000
-
-/**
- * @brief  电机初始化
- * @param  无
- */
+#define ABS(x) ((x) > 0 ? (x) : -(x))
 
 void motor_init()
 {
-	gpio_init(DIR_L, GPO, GPIO_HIGH, GPO_PUSH_PULL); // GPIO 初始化为输出 默认上拉输出高
-	pwm_init(PWM_L, 17000, 0);						 // PWM 通道初始化频率 17KHz 占空比初始为 0
-
-	gpio_init(DIR_R, GPO, GPIO_HIGH, GPO_PUSH_PULL); // GPIO 初始化为输出 默认上拉输出高
-	pwm_init(PWM_R, 17000, 0);						 // PWM 通道初始化频率 17KHz 占空比初始为 0
+    // 初始化左电机方向控制引脚
+    gpio_init(MOTOR_L_AIN1, GPO, GPIO_LOW, GPO_PUSH_PULL);
+    gpio_init(MOTOR_L_AIN2, GPO, GPIO_LOW, GPO_PUSH_PULL);
+    
+    // 初始化右电机方向控制引脚
+    gpio_init(MOTOR_R_BIN1, GPO, GPIO_LOW, GPO_PUSH_PULL);
+    gpio_init(MOTOR_R_BIN2, GPO, GPIO_LOW, GPO_PUSH_PULL);
+    
+    // 初始化PWM通道（使用默认17KHz频率）
+    pwm_init(MOTOR_L_PWM, 17000, 0);
+    pwm_init(MOTOR_R_PWM, 17000, 0);
 }
 
-/**
-  * @brief  电机速度设置
-  * @param  motor1：左电机速度
-						motor2：右电机速度
-  */
-void Load(int motor1, int motor2)
+void motor_control(int16_t speed_left, int16_t speed_right)
 {
-	if (motor1 < 0)
-	{
-		gpio_set_level(DIR_L, GPIO_HIGH); // DIR输出高电平
-		pwm_set_duty(PWM_L, abs(motor1)); // 计算占空比
-	}
-	else
-	{
-		gpio_set_level(DIR_L, GPIO_LOW);  // DIR输出低电平
-		pwm_set_duty(PWM_L, abs(motor1)); // 计算占空比
-	}
-	if (motor2 < 0)
-	{
-		gpio_set_level(DIR_R, GPIO_LOW);  // DIR输出低电平
-		pwm_set_duty(PWM_R, abs(motor2)); // 计算占空比
-	}
-	else
-	{
-		gpio_set_level(DIR_R, GPIO_HIGH); // DIR输出高电平
-		pwm_set_duty(PWM_R, abs(motor2)); // 计算占空比
-	}
+    // 左电机控制
+    if(speed_left > 0)
+    {
+        gpio_set_level(MOTOR_L_AIN1, GPIO_HIGH);  // 正转
+        gpio_set_level(MOTOR_L_AIN2, GPIO_LOW);
+    }
+    else if(speed_left < 0)
+    {
+        gpio_set_level(MOTOR_L_AIN1, GPIO_LOW);   // 反转
+        gpio_set_level(MOTOR_L_AIN2, GPIO_HIGH);
+    }
+    else
+    {
+        gpio_set_level(MOTOR_L_AIN1, GPIO_LOW);
+        gpio_set_level(MOTOR_L_AIN2, GPIO_LOW);
+    }
+    pwm_set_duty(MOTOR_L_PWM, ABS(speed_left));  // 设置占空比（绝对值）
+
+    // 右电机控制
+    if(speed_right > 0)
+    {
+        gpio_set_level(MOTOR_R_BIN1, GPIO_HIGH);  // 正转
+        gpio_set_level(MOTOR_R_BIN2, GPIO_LOW);
+    }
+    else if(speed_right < 0)
+    {
+        gpio_set_level(MOTOR_R_BIN1, GPIO_LOW);   // 反转
+        gpio_set_level(MOTOR_R_BIN2, GPIO_HIGH);
+    }
+    else
+    {
+        gpio_set_level(MOTOR_R_BIN1, GPIO_LOW);
+        gpio_set_level(MOTOR_R_BIN2, GPIO_LOW);
+    }
+    pwm_set_duty(MOTOR_R_PWM, ABS(speed_right));  // 设置占空比（绝对值）
 }
 
 /**

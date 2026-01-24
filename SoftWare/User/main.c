@@ -49,7 +49,7 @@ int main(void)
     while (1)
     {
         // 左右电机同速正转（前进）
-        Load(target_speed, target_speed);
+        motor_control(target_speed, target_speed);
         
         // 可选：添加延时控制转速（根据实际测试调整）
         system_delay_ms(10);

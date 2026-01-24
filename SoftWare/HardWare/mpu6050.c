@@ -9,11 +9,11 @@ void imu_init(void)
     {
         if (mpu6050_init())  // 使用MPU6050初始化函数
         {
-            ips200_show_string(10, 140, "imu init error"); 
+            tft180_show_string(10, 140, "imu init error"); 
         }
         else
         {
-            ips200_show_string(10, 140, "imu init success");
+            tft180_show_string(10, 140, "imu init success");
             break;
         }
     }
