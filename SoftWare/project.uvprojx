@@ -133,12 +133,12 @@
             <UseExternalTool>0</UseExternalTool>
             <RunIndependent>0</RunIndependent>
             <UpdateFlashBeforeDebugging>1</UpdateFlashBeforeDebugging>
-            <Capability>0</Capability>
-            <DriverSelection>-1</DriverSelection>
+            <Capability>1</Capability>
+            <DriverSelection>4096</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -336,7 +336,7 @@
               <MiscControls>--gnu</MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>.\User;.\Library\zf_common;.\Library\zf_device;.\Library\zf_driver;.\Library\sdk;.\Library\sdk\CMSIS\Include;.\Library\sdk\drivers;.\Library\components\fatfs\source</IncludePath>
+              <IncludePath>.\User;.\Library\zf_common;.\Library\zf_device;.\Library\zf_driver;.\Library\sdk;.\Library\sdk\CMSIS\Include;.\Library\sdk\drivers;.\Library\components\fatfs\source;.\HardWare</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
