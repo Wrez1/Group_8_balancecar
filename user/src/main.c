@@ -78,7 +78,7 @@
 #define HALL_PIN                (C5 )
 #define LED1                    (H2 )
 #define LED2                    (B13)
-
+//好奇怪
 uint32 trigger_count = 0;
 uint32 trigger_state = 0;
 
