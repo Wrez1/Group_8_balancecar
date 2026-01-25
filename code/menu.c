@@ -28,24 +28,24 @@ static void _draw_main_menu(void) {
     if(g_refresh_needed == 0) return;
 
     tft180_clear(); //
-    tft180_show_string(10, 5, "SmartCar Menu");
-    tft180_show_string(0, 25, "----------------");
+    tft180_show_string(10, 8, "SmartCar Menu");
+    tft180_show_string(0, 20, "----------------");
 
     // 根据当前索引绘制菜单项
-    tft180_show_string(0, 40,  (g_current_mode_index == MODE_1_BALANCE) ? "> 1.Balance"    : "  1.Balance");
-    tft180_show_string(0, 56,  (g_current_mode_index == MODE_2_ROUTE_1) ? "> 2.Route A-D"  : "  2.Route A-D");
-    tft180_show_string(0, 72,  (g_current_mode_index == MODE_3_ROUTE_2) ? "> 3.Race 4Laps" : "  3.Race 4Laps");
-    tft180_show_string(0, 88,  (g_current_mode_index == MODE_4_TEACH)   ? "> 4.Teach Mode" : "  4.Teach Mode");
-    tft180_show_string(0, 104, (g_current_mode_index == MODE_5_REMOTE)  ? "> 5.Remote"     : "  5.Remote");
+    tft180_show_string(0, 30,  (g_current_mode_index == MODE_1_BALANCE) ? "> 1.Balance"    : "  1.Balance");
+	tft180_show_string(0, 40,  (g_current_mode_index == MODE_2_ROUTE_1) ? "> 2.Route A-D"  : "  2.Route A-D");
+    tft180_show_string(0, 50,  (g_current_mode_index == MODE_3_ROUTE_2) ? "> 3.Race 4Laps" : "  3.Race 4Laps");
+    tft180_show_string(0, 60,  (g_current_mode_index == MODE_4_TEACH)   ? "> 4.Teach Mode" : "  4.Teach Mode");
+    tft180_show_string(0, 70, (g_current_mode_index == MODE_5_REMOTE)  ? "> 5.Remote"     : "  5.Remote");
     
-    tft180_show_string(0, 130, "K1:Next K2:Ok");
+    tft180_show_string(0, 80, "K1:Next K2:Ok");
     
     g_refresh_needed = 0; // 清除刷新标志
 }
 
 // 绘制模式详情界面
 static void _draw_mode_page(void) {
-    if(g_refresh_needed == 0) return;
+    if(g_refresh_needed == 1) return;
     
     tft180_clear();
     tft180_show_string(10, 10, "Mode Running...");
@@ -77,7 +77,7 @@ static void _draw_mode_page(void) {
             break;
     }
     
-    tft180_show_string(0, 140, "Hold K4 to Exit");
+    tft180_show_string(0, 100, "Hold K4 to Exit");
     
     g_refresh_needed = 0;
 }
@@ -89,57 +89,56 @@ void menu_init(void) {
     g_sys_state = SYS_MENU_SELECT;
     g_current_mode_index = MODE_1_BALANCE;
     g_refresh_needed = 1;
+	
+	timer_init(TIM_6, TIMER_MS); 
+    timer_start(TIM_6);
+	
+	key_init(5);
 }
 
 // 菜单主循环操作函数
 void menu_operation(void) {
-    // 1. 扫描按键 (核心库函数)
-    key_scanner(); //
-    
-    // 获取按键状态
-    // 请根据实际情况修改 KEY_1, KEY_2 等引脚宏定义
-    key_state_enum k1 = key_get_state(KEY_1); // 切换
-    key_state_enum k2 = key_get_state(KEY_2); // 确认
-    key_state_enum k4 = key_get_state(KEY_4); // 退出
-    
-    // 2. 状态机逻辑
-    switch (g_sys_state) {
+    static uint16_t last_scan_time = 0;
+    uint16_t current_time = timer_get(TIM_6);
+
+    // 【核心】每 5ms 才允许运行一次按键逻辑
+    if ((uint16_t)(current_time - last_scan_time) >= 5) 
+    {
+        last_scan_time = current_time;
+
+        // --- 按键处理区域 ---
+        key_scanner(); // 库函数扫描
         
-        // --- 状态：主菜单选择 ---
-        case SYS_MENU_SELECT:
-            // 绘制菜单
-            _draw_main_menu();
-            
-            // 逻辑：切换选项
-            if (k1 == KEY_SHORT_PRESS) {
-                g_current_mode_index++;
-                if (g_current_mode_index >= MODE_COUNT) g_current_mode_index = 0;
-                g_refresh_needed = 1; // 触发刷新
-            }
-            
-            // 逻辑：确认进入
-            if (k2 == KEY_SHORT_PRESS) {
-                g_sys_state = SYS_MODE_DISPLAY;
-                g_refresh_needed = 1; // 触发刷新
-            }
-            break;
-            
-        // --- 状态：模式运行/显示 ---
-        case SYS_MODE_DISPLAY:
-            // 绘制详情页
-            _draw_mode_page();
-            
-            // 可以在这里添加具体的模式运行逻辑调用
-            // 例如：if (g_current_mode_index == MODE_1_BALANCE) run_balance_logic();
-            
-            // 逻辑：长按退出回菜单
-            if (k4 == KEY_LONG_PRESS || k4 == KEY_SHORT_PRESS) {
-                g_sys_state = SYS_MENU_SELECT;
-                g_refresh_needed = 1; // 触发刷新
-            }
-            break;
+        // 获取状态
+        key_state_enum k1 = key_get_state(KEY_1);
+        key_state_enum k2 = key_get_state(KEY_2);
+        key_state_enum k4 = key_get_state(KEY_4);
+        
+        // 状态机
+        switch (g_sys_state) {
+            case SYS_MENU_SELECT:
+                _draw_main_menu();
+                // 只有消抖后，这里才不会连发
+                if (k1 == KEY_SHORT_PRESS) {
+                    g_current_mode_index++;
+                    if (g_current_mode_index >= MODE_COUNT) g_current_mode_index = 0;
+                    g_refresh_needed = 1; 
+                }
+                // 确认进入
+                if (k2 == KEY_SHORT_PRESS) {
+                    g_sys_state = SYS_MODE_DISPLAY;
+                    g_refresh_needed = 1; 
+                }
+                break;
+                
+            case SYS_MODE_DISPLAY:
+                _draw_mode_page();
+                if (k4 == KEY_LONG_PRESS) {
+                    g_sys_state = SYS_MENU_SELECT;
+                    g_refresh_needed = 1; 
+                }
+                break;
+        }
+        key_clear_all_state(); 
     }
-    
-    // 3. 清除按键状态 (必须调用，否则按键会一直触发)
-    key_clear_all_state(); //
 }
