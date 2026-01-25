@@ -15,6 +15,9 @@
 #define MAX_DUTY        (10000)  // 最大占空比100%
 #define MIN_DUTY        (0)     // 最小占空比0%
 
+#define PWM_MAX 8000
+#define PWM_MIN -8000
+#define ABS(x) ((x) > 0 ? (x) : -(x))
 void motor_init(void);
 void motor_control(int16_t speed_left, int16_t speed_right);
 

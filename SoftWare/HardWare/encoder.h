@@ -14,8 +14,8 @@
 
 extern int16 Encoder_Left;
 extern int16 Encoder_Right;
-
-
+int16_t Get_Count1(void);
+int16_t Get_Count1(void);
 void encoder_init(void);
 void pit_encoder_handler (void);
 

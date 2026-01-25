@@ -8,7 +8,19 @@ int16 Encoder_Right = 0;
 void encoder_init()
 {
     encoder_quad_init(ENCODER_1, ENCODER_1_A, ENCODER_1_B); // 初始化编码器模块与引脚 正交解码编码器模式
+	encoder_clear_count(ENCODER_1);
     encoder_quad_init(ENCODER_2, ENCODER_2_A, ENCODER_2_B); // 初始化编码器模块与引脚 正交解码编码器模式
+	encoder_clear_count(ENCODER_2);
+}
+
+int16_t Get_Count1(void)															
+{
+	return  encoder_get_count(ENCODER_1);	
+}
+
+int16_t Get_Count2(void)															
+{
+	return  encoder_get_count(ENCODER_2);	
 }
 
 //-------------------------------------------------------------------------------------------------------------------

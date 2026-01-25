@@ -35,24 +35,19 @@
 
 #include "zf_common_headfile.h"
 #include "motor.h"
-
+#include "encoder.h"
 // 主函数
 int main(void)
 {
     
     // 初始化电机模块
     motor_init();
-    
-    // 设定目标速度（示例：50%占空比，可根据实际需求调整）
-    const int target_speed = 4000;  // 范围：-8000 ~ 8000
+    encoder_init();
     
     while (1)
     {
         // 左右电机同速正转（前进）
-        motor_control(target_speed, target_speed);
-        
-        // 可选：添加延时控制转速（根据实际测试调整）
-        system_delay_ms(10);
+        motor_control(7000, 7000);
     }
     
     return 0;
