@@ -22,6 +22,7 @@ void motor_init()
 
 void motor_control(int16_t speed_left, int16_t speed_right)
 {
+	pwm_set_duty(MOTOR_L_PWM, ABS(speed_left));  // 设置占空比（绝对值）
     // 左电机控制
     if(speed_left > 0)
     {
@@ -38,8 +39,8 @@ void motor_control(int16_t speed_left, int16_t speed_right)
         gpio_set_level(MOTOR_L_AIN1, GPIO_LOW);
         gpio_set_level(MOTOR_L_AIN2, GPIO_LOW);
     }
-    pwm_set_duty(MOTOR_L_PWM, ABS(speed_left));  // 设置占空比（绝对值）
-
+    
+    pwm_set_duty(MOTOR_R_PWM, ABS(speed_right));  // 设置占空比（绝对值）
     // 右电机控制
     if(speed_right > 0)
     {
@@ -56,7 +57,7 @@ void motor_control(int16_t speed_left, int16_t speed_right)
         gpio_set_level(MOTOR_R_BIN1, GPIO_LOW);
         gpio_set_level(MOTOR_R_BIN2, GPIO_LOW);
     }
-    pwm_set_duty(MOTOR_R_PWM, ABS(speed_right));  // 设置占空比（绝对值）
+    
 }
 
 /**
