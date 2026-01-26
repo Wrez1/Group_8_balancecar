@@ -13,12 +13,12 @@ void encoder_init()
 	encoder_clear_count(ENCODER_2);
 }
 
-int16_t Get_Count1(void)															
+int16_t Get_Encoder1(void)															
 {
 	return  encoder_get_count(ENCODER_1);	
 }
 
-int16_t Get_Count2(void)															
+int16_t Get_Encoder2(void)															
 {
 	return  encoder_get_count(ENCODER_2);	
 }

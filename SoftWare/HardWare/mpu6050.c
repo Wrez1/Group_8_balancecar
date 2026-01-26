@@ -25,7 +25,7 @@ uint8 acc_ration = 4;      // 根据实际加速度计量程调整
 float filtering_angle = 0; 
 float angle_roll_temp;          
 float angle_yaw_temp = 0.0f;
-float yaw=0;
+extern float yaw;
 
 float call_cycle = 0.002f;
 

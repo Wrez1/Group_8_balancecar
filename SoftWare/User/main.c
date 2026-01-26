@@ -36,15 +36,62 @@
 #include "zf_common_headfile.h"
 #include "motor.h"
 #include "encoder.h"
+#include "pid.h"
+#include "mpu6050.h"
 
-#define PIT                             (TIM6_PIT )                             // 使用的周期中断编号 如果修改 需要同步对应修改周期中断编号与 isr.c 中的调用
-#define PIT_PRIORITY                    (TIM6_IRQn)                             // 对应周期中断的中断编号 在 mm32f3277gx.h 头文件中查看 IRQn_Type 枚举体
+float gyro_yaw = 0, gyro_pitch = 0, gyro_roll = 0;
+float acc_yaw = 0, acc_pitch = 0, acc_roll = 0;
+int16 AX, AY, AZ;
+float yaw, pitch, roll;
+
+float SpeedLeft,SpeedRight;
+float AveSpeed,DifSpeed;
+int16_t LeftPWM,RightPWM;
+int16_t AvePWM,DifPWM;
+
+PID_t AnglePID = {
+	.Kp = 5,
+	.Ki = 0.1,
+	.Kd = 5,
+	
+	.OutMax = 100,
+	.OutMin = -100,
+	
+	.OutOffset = 3,
+	
+	.ErrorIntMax = 600,
+	.ErrorIntMin = -600,
+};
+
+PID_t SpeedPID = {
+	.Kp = 2,
+	.Ki = 0.05,
+	.Kd = 0,
+	
+	.OutMax = 20,
+	.OutMin = -20,
+	
+	.ErrorIntMax = 150,
+	.ErrorIntMin = -150,
+};
+
+PID_t TurnPID = {
+	.Kp = 4,
+	.Ki = 3,
+	.Kd = 0,
+	
+	.OutMax = 50,
+	.OutMin = -50,
+	
+	.ErrorIntMax = 20,
+	.ErrorIntMin = -20,
+};
+
 // 主函数
 int main(void)
 {
     clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
     debug_init();                                                               // 初始化默认 Debug UART
-	pit_ms_init(PIT, 100);                                                      // 初始化 PIT 为周期中断 100ms 周期
     // 初始化电机模块
     motor_init();
     encoder_init();
@@ -53,6 +100,7 @@ int main(void)
     {
         // 左右电机同速正转（前进）
         motor_control(7000, 7000);
+		
     }
     
     return 0;

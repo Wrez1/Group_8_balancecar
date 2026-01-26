@@ -26,5 +26,8 @@ typedef struct {
 
 void PID_Init(PID_t *p);
 void PID_Update(PID_t *p);
+void Angle_PIDControl(void);
+void Speed_PIDControl(void);
+void Turn_PIDControl(void);
 
 #endif
