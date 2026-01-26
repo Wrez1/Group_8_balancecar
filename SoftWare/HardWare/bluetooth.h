@@ -1,22 +1,22 @@
-#ifndef _BLUETOOTH_H_
-#define _BLUETOOTH_H_
+#ifndef __BLUETOOTH_H
+#define __BLUETOOTH_H
+#include "zf_common_headfile.h"
+#include "zf_driver_uart.h"
 
-#include "zf_common_typedef.h"
+// 定义蓝牙使用的串口号和引脚
+#define BLUETOOTH_UART UART_6
+#define BLUETOOTH_TX_PIN UART6_TX_C6
+#define BLUETOOTH_RX_PIN UART6_RX_C7
+#define BLUETOOTH_UART_IRQn UART6_IRQn
+// 接收缓冲区和状态标志
+extern char Bluetooth_RxPacket[100];
+extern uint8_t Bluetooth_RxFlag;
 
-#define BLUETOOTH_INDEX                  ( UART_6 )      // 使用的串口号（需与硬件连接一致）
-#define BLUETOOTH_BUAD_RATE              ( 9600 )        // HC04默认波特率
-#define BLUETOOTH_TX_PIN                 ( UART6_RX_C7 ) // HC04 TX接MCU RX（推挽输出模式）
-#define BLUETOOTH_RX_PIN                 ( UART6_TX_C6 ) // HC04 RX接MCU TX（输入上拉）
-#define BLUETOOTH_BUFFER_SIZE            ( 64 )          // 接收缓冲区大小
-#define BLUETOOTH_TIMEOUT_COUNT          ( 500 )         // 超时计数阈值
+void Bluetooth_Init(void);
+void Bluetooth_SendByte(uint8_t Byte);
+void Bluetooth_SendArray(uint8_t *Array, uint16_t Length);
+void Bluetooth_SendString(char *String);
+void Bluetooth_SendNumber(uint32_t Number, uint8_t Length);
+void Bluetooth_ProcessData(void);
 
-// 函数声明
-uint32 bluetooth_send_byte          (const uint8 data);
-uint32 bluetooth_send_buffer        (const uint8 *buff, uint32 len);
-uint32 bluetooth_send_string        (const char *str);
-void   bluetooth_send_image         (const uint8 *image_addr, uint32 image_size);
-uint32 bluetooth_read_buffer        (uint8 *buff, uint32 len);
-void   bluetooth_uart_callback      (void);
-uint8  bluetooth_init               (void);
-
-#endif //
+#endif

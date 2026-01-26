@@ -36,10 +36,15 @@
 #include "zf_common_headfile.h"
 #include "motor.h"
 #include "encoder.h"
+
+#define PIT                             (TIM6_PIT )                             // 使用的周期中断编号 如果修改 需要同步对应修改周期中断编号与 isr.c 中的调用
+#define PIT_PRIORITY                    (TIM6_IRQn)                             // 对应周期中断的中断编号 在 mm32f3277gx.h 头文件中查看 IRQn_Type 枚举体
 // 主函数
 int main(void)
 {
-    
+    clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
+    debug_init();                                                               // 初始化默认 Debug UART
+	pit_ms_init(PIT, 100);                                                      // 初始化 PIT 为周期中断 100ms 周期
     // 初始化电机模块
     motor_init();
     encoder_init();
@@ -52,4 +57,3 @@ int main(void)
     
     return 0;
 }
-

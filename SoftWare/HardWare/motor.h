@@ -1,6 +1,6 @@
 #ifndef _MOTOR_H
 #define _MOTOR_H
-
+#include "zf_common_headfile.h"
 #include "zf_common_typedef.h"
 
 // TB6612Òý½Å¶¨Òå

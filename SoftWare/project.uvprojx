@@ -433,6 +433,16 @@
               <FileType>5</FileType>
               <FilePath>.\HardWare\bluetooth.h</FilePath>
             </File>
+            <File>
+              <FileName>pid.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HardWare\pid.c</FilePath>
+            </File>
+            <File>
+              <FileName>pid.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HardWare\pid.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

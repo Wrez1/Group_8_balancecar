@@ -1,6 +1,6 @@
 #ifndef _ENCODER_H
 #define _ENCODER_H
-
+#include "zf_common_headfile.h"
 #include "zf_common_typedef.h"
 
 #define ENCODER_1                   (TIM3_ENCODER)
