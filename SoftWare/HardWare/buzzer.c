@@ -7,8 +7,8 @@ void buzzer_init()
 }
 
 /**
- * @brief  ·äÃùÆ÷¾¯±¨
- * @param  tim£¨1¿ªÆô£¬0¹Ø±Õ£©
+ * @brief  èœ‚é¸£å™¨è­¦æŠ¥
+ * @param  timï¼ˆ1å¼€å¯ï¼Œ0å…³é—­ï¼‰
  */
 void buzzer_on(int16 tim)
 {

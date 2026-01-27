@@ -7,31 +7,31 @@
 
 void motor_init()
 {
-    // ³õÊ¼»¯×óµç»ú·½Ïò¿ØÖÆÒý½Å
+    // åˆå§‹åŒ–å·¦ç”µæœºæ–¹å‘æŽ§åˆ¶å¼•è„š
     gpio_init(MOTOR_L_AIN1, GPO, GPIO_LOW, GPO_PUSH_PULL);
     gpio_init(MOTOR_L_AIN2, GPO, GPIO_LOW, GPO_PUSH_PULL);
     
-    // ³õÊ¼»¯ÓÒµç»ú·½Ïò¿ØÖÆÒý½Å
+    // åˆå§‹åŒ–å³ç”µæœºæ–¹å‘æŽ§åˆ¶å¼•è„š
     gpio_init(MOTOR_R_BIN1, GPO, GPIO_LOW, GPO_PUSH_PULL);
     gpio_init(MOTOR_R_BIN2, GPO, GPIO_LOW, GPO_PUSH_PULL);
     
-    // ³õÊ¼»¯PWMÍ¨µÀ£¨Ê¹ÓÃÄ¬ÈÏ17KHzÆµÂÊ£©
+    // åˆå§‹åŒ–PWMé€šé“ï¼ˆä½¿ç”¨é»˜è®¤17KHzé¢‘çŽ‡ï¼‰
     pwm_init(MOTOR_L_PWM, 17000, 0);
     pwm_init(MOTOR_R_PWM, 17000, 0);
 }
 
 void motor_control(int16_t speed_left, int16_t speed_right)
 {
-	pwm_set_duty(MOTOR_L_PWM, ABS(speed_left));  // ÉèÖÃÕ¼¿Õ±È£¨¾ø¶ÔÖµ£©
-    // ×óµç»ú¿ØÖÆ
+	pwm_set_duty(MOTOR_L_PWM, ABS(speed_left));  // è®¾ç½®å ç©ºæ¯”ï¼ˆç»å¯¹å€¼ï¼‰
+    // å·¦ç”µæœºæŽ§åˆ¶
     if(speed_left > 0)
     {
-        gpio_set_level(MOTOR_L_AIN1, GPIO_HIGH);  // Õý×ª
+        gpio_set_level(MOTOR_L_AIN1, GPIO_HIGH);  // æ­£è½¬
         gpio_set_level(MOTOR_L_AIN2, GPIO_LOW);
     }
     else if(speed_left < 0)
     {
-        gpio_set_level(MOTOR_L_AIN1, GPIO_LOW);   // ·´×ª
+        gpio_set_level(MOTOR_L_AIN1, GPIO_LOW);   // åè½¬
         gpio_set_level(MOTOR_L_AIN2, GPIO_HIGH);
     }
     else
@@ -40,16 +40,16 @@ void motor_control(int16_t speed_left, int16_t speed_right)
         gpio_set_level(MOTOR_L_AIN2, GPIO_LOW);
     }
     
-    pwm_set_duty(MOTOR_R_PWM, ABS(speed_right));  // ÉèÖÃÕ¼¿Õ±È£¨¾ø¶ÔÖµ£©
-    // ÓÒµç»ú¿ØÖÆ
+    pwm_set_duty(MOTOR_R_PWM, ABS(speed_right));  // è®¾ç½®å ç©ºæ¯”ï¼ˆç»å¯¹å€¼ï¼‰
+    // å³ç”µæœºæŽ§åˆ¶
     if(speed_right > 0)
     {
-        gpio_set_level(MOTOR_R_BIN1, GPIO_HIGH);  // Õý×ª
+        gpio_set_level(MOTOR_R_BIN1, GPIO_HIGH);  // æ­£è½¬
         gpio_set_level(MOTOR_R_BIN2, GPIO_LOW);
     }
     else if(speed_right < 0)
     {
-        gpio_set_level(MOTOR_R_BIN1, GPIO_LOW);   // ·´×ª
+        gpio_set_level(MOTOR_R_BIN1, GPIO_LOW);   // åè½¬
         gpio_set_level(MOTOR_R_BIN2, GPIO_HIGH);
     }
     else
@@ -61,9 +61,9 @@ void motor_control(int16_t speed_left, int16_t speed_right)
 }
 
 /**
-  * @brief  µç»úËÙ¶ÈÏÞ·ù
-  * @param  motor1£º×óµç»úËÙ¶È
-						motor2£ºÓÒµç»úËÙ¶È
+  * @brief  ç”µæœºé€Ÿåº¦é™å¹…
+  * @param  motor1ï¼šå·¦ç”µæœºé€Ÿåº¦
+						motor2ï¼šå³ç”µæœºé€Ÿåº¦
   */
 void Limit(int *motor1, int *motor2)
 {

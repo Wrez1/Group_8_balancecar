@@ -7,9 +7,9 @@ int16 Encoder_Right = 0;
 
 void encoder_init()
 {
-    encoder_quad_init(ENCODER_1, ENCODER_1_A, ENCODER_1_B); // ³õÊ¼»¯±àÂëÆ÷Ä£¿éÓëÒı½Å Õı½»½âÂë±àÂëÆ÷Ä£Ê½
+    encoder_quad_init(ENCODER_1, ENCODER_1_A, ENCODER_1_B); // åˆå§‹åŒ–ç¼–ç å™¨æ¨¡å—ä¸å¼•è„š æ­£äº¤è§£ç ç¼–ç å™¨æ¨¡å¼
 	encoder_clear_count(ENCODER_1);
-    encoder_quad_init(ENCODER_2, ENCODER_2_A, ENCODER_2_B); // ³õÊ¼»¯±àÂëÆ÷Ä£¿éÓëÒı½Å Õı½»½âÂë±àÂëÆ÷Ä£Ê½
+    encoder_quad_init(ENCODER_2, ENCODER_2_A, ENCODER_2_B); // åˆå§‹åŒ–ç¼–ç å™¨æ¨¡å—ä¸å¼•è„š æ­£äº¤è§£ç ç¼–ç å™¨æ¨¡å¼
 	encoder_clear_count(ENCODER_2);
 }
 
@@ -24,16 +24,16 @@ int16_t Get_Encoder2(void)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-// º¯Êı¼ò½é     PIT µÄÖĞ¶Ï´¦Àíº¯Êı Õâ¸öº¯Êı½«ÔÚ PIT ¶ÔÓ¦µÄ¶¨Ê±Æ÷ÖĞ¶Ïµ÷ÓÃ Ïê¼û isr.c
-// ²ÎÊıËµÃ÷     void
-// ·µ»Ø²ÎÊı     void
-// Ê¹ÓÃÊ¾Àı     pit_handler();
+// å‡½æ•°ç®€ä»‹     PIT çš„ä¸­æ–­å¤„ç†å‡½æ•° è¿™ä¸ªå‡½æ•°å°†åœ¨ PIT å¯¹åº”çš„å®šæ—¶å™¨ä¸­æ–­è°ƒç”¨ è¯¦è§ isr.c
+// å‚æ•°è¯´æ˜     void
+// è¿”å›å‚æ•°     void
+// ä½¿ç”¨ç¤ºä¾‹     pit_handler();
 //-------------------------------------------------------------------------------------------------------------------
 void pit_encoder_handler(void)
 {
-    Encoder_Left = encoder_get_count(ENCODER_1); // »ñÈ¡±àÂëÆ÷¼ÆÊı
-    encoder_clear_count(ENCODER_1);              // Çå¿Õ±àÂëÆ÷¼ÆÊı
+    Encoder_Left = encoder_get_count(ENCODER_1); // è·å–ç¼–ç å™¨è®¡æ•°
+    encoder_clear_count(ENCODER_1);              // æ¸…ç©ºç¼–ç å™¨è®¡æ•°
 
-    Encoder_Right = -encoder_get_count(ENCODER_2); // »ñÈ¡±àÂëÆ÷¼ÆÊı
-    encoder_clear_count(ENCODER_2);               // Çå¿Õ±àÂëÆ÷¼ÆÊı	
+    Encoder_Right = -encoder_get_count(ENCODER_2); // è·å–ç¼–ç å™¨è®¡æ•°
+    encoder_clear_count(ENCODER_2);               // æ¸…ç©ºç¼–ç å™¨è®¡æ•°	
 }

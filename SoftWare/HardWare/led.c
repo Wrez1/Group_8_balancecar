@@ -7,8 +7,8 @@ void led_init()
 }
 
 /**
- * @brief  LED·¢¹â
- * @param  tim£¨1¿ªÆô£¬0¹Ø±Õ£©
+ * @brief  LEDå‘å…‰
+ * @param  timï¼ˆ1å¼€å¯ï¼Œ0å…³é—­ï¼‰
  */
 void led_on(int16 tim)
 {

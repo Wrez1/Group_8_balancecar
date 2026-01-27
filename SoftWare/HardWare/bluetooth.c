@@ -6,38 +6,38 @@
 char Bluetooth_RxPacket[100] = {0};
 uint8_t Bluetooth_RxFlag = 0;
 
-// ³õÊ¼»¯À¶ÑÀÍ¨ĞÅ
+// åˆå§‹åŒ–è“ç‰™é€šä¿¡
 void Bluetooth_Init(void)
 {
-    // ³õÊ¼»¯UART1
+    // åˆå§‹åŒ–UART1
     uart_init(BLUETOOTH_UART, 9600, BLUETOOTH_TX_PIN, BLUETOOTH_RX_PIN);
     
-    // ÆôÓÃ½ÓÊÕÖĞ¶Ï
+    // å¯ç”¨æ¥æ”¶ä¸­æ–­
     uart_rx_interrupt(BLUETOOTH_UART, 1);
     
-    // ×¢²áÖĞ¶Ï·şÎñº¯Êı
+    // æ³¨å†Œä¸­æ–­æœåŠ¡å‡½æ•°
     NVIC_EnableIRQ(BLUETOOTH_UART_IRQn);
 }
 
-// ·¢ËÍµ¥¸ö×Ö½Ú
+// å‘é€å•ä¸ªå­—èŠ‚
 void Bluetooth_SendByte(uint8_t Byte)
 {
     uart_write_byte(BLUETOOTH_UART, Byte);
 }
 
-// ·¢ËÍÊı×é
+// å‘é€æ•°ç»„
 void Bluetooth_SendArray(uint8_t *Array, uint16_t Length)
 {
     uart_write_buffer(BLUETOOTH_UART, Array, Length);
 }
 
-// ·¢ËÍ×Ö·û´®
+// å‘é€å­—ç¬¦ä¸²
 void Bluetooth_SendString(char *String)
 {
     uart_write_string(BLUETOOTH_UART, String);
 }
 
-// ·¢ËÍÊı×Ö
+// å‘é€æ•°å­—
 void Bluetooth_SendNumber(uint32_t Number, uint8_t Length)
 {
     char temp[20];
@@ -45,7 +45,7 @@ void Bluetooth_SendNumber(uint32_t Number, uint8_t Length)
     Bluetooth_SendString(temp);
 }
 
-// ÖĞ¶Ï·şÎñº¯Êı
+// ä¸­æ–­æœåŠ¡å‡½æ•°
 void BLUETOOTH_UART_IRQHandler(void)
 {
     static uint8_t RxState = 0;
@@ -77,7 +77,7 @@ void BLUETOOTH_UART_IRQHandler(void)
     }
 }
 
-// Êı¾İ´¦Àíº¯Êı
+// æ•°æ®å¤„ç†å‡½æ•°
 void Bluetooth_ProcessData(void)
 {
     if (Bluetooth_RxFlag)

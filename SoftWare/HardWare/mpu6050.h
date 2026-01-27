@@ -6,7 +6,7 @@
 #define gx_error -3
 #define gy_error 12
 #define gz_error 4
-#define machine_mid -3850//»úÆ÷ÖĞÎ»
+#define machine_mid -3850//æœºå™¨ä¸­ä½
 extern float roll,roll_offset,yaw;
 extern float filtering_angle;
 extern float yaw;

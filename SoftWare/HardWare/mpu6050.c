@@ -1,13 +1,13 @@
 #include "zf_common_headfile.h"
 #include <math.h>
-#include "mpu6050.h"  // ĞÂÔöMPU6050Í·ÎÄ¼ş
+#include "mpu6050.h"  // æ–°å¢MPU6050å¤´æ–‡ä»¶
 
 void imu_init(void)
 {
-    // ³õÊ¼»¯MPU6050
+    // åˆå§‹åŒ–MPU6050
     while (1)
     {
-        if (mpu6050_init())  // Ê¹ÓÃMPU6050³õÊ¼»¯º¯Êı
+        if (mpu6050_init())  // ä½¿ç”¨MPU6050åˆå§‹åŒ–å‡½æ•°
         {
             tft180_show_string(10, 140, "imu init error"); 
         }
@@ -19,9 +19,9 @@ void imu_init(void)
     }
 }
 
-/* Ò»½×»¥²¹ÂË²¨ */
-uint8 gyro_ration = 16;     // ĞŞ¸Ä±ÈÀıÒò×ÓÒÔÆ¥ÅäMPU6050Á¿³Ì£¨¡À2000dps¶ÔÓ¦16.4 LSB/(¡ã/s)£©
-uint8 acc_ration = 4;      // ¸ù¾İÊµ¼Ê¼ÓËÙ¶È¼ÆÁ¿³Ìµ÷Õû
+/* ä¸€é˜¶äº’è¡¥æ»¤æ³¢ */
+uint8 gyro_ration = 16;     // ä¿®æ”¹æ¯”ä¾‹å› å­ä»¥åŒ¹é…MPU6050é‡ç¨‹ï¼ˆÂ±2000dpså¯¹åº”16.4 LSB/(Â°/s)ï¼‰
+uint8 acc_ration = 4;      // æ ¹æ®å®é™…åŠ é€Ÿåº¦è®¡é‡ç¨‹è°ƒæ•´
 float filtering_angle = 0; 
 float angle_roll_temp;          
 float angle_yaw_temp = 0.0f;
@@ -38,11 +38,11 @@ int16_t az;
 
 void first_order_complementary_filtering(void)
 {
-    // »ñÈ¡MPU6050Êı¾İ
+    // è·å–MPU6050æ•°æ®
     mpu6050_get_acc();
     mpu6050_get_gyro();
 
-    // Ö±½ÓÊ¹ÓÃMPU6050×ª»»ºóµÄÊı¾İ£¨µ¥Î»£º¡ã/s ºÍ g£©
+    // ç›´æ¥ä½¿ç”¨MPU6050è½¬æ¢åçš„æ•°æ®ï¼ˆå•ä½ï¼šÂ°/s å’Œ gï¼‰
     gx = mpu6050_gyro_x + gx_error;
     gy = mpu6050_gyro_y + gy_error;
     gz = mpu6050_gyro_z + gz_error;
@@ -50,7 +50,7 @@ void first_order_complementary_filtering(void)
     ay = mpu6050_acc_y;
     az = mpu6050_acc_z;
 
-    // Êı¾İÂË²¨´¦Àí
+    // æ•°æ®æ»¤æ³¢å¤„ç†
     if (abs(gx) < 5) gx = 0;
     if (abs(gy) < 5) gy = 0;
     if (abs(gz) < 5) gz = 0;
@@ -58,14 +58,14 @@ void first_order_complementary_filtering(void)
     float gyro_temp;
     float acc_temp;
     
-    // Ê¹ÓÃMPU6050ÄÚÖÃ×ª»»º¯Êı
-    gyro_temp = mpu6050_gyro_transition(gx);  // ×Ô¶¯´¦ÀíÁ¿³Ì×ª»»
+    // ä½¿ç”¨MPU6050å†…ç½®è½¬æ¢å‡½æ•°
+    gyro_temp = mpu6050_gyro_transition(gx);  // è‡ªåŠ¨å¤„ç†é‡ç¨‹è½¬æ¢
     acc_temp = (ay - angle_roll_temp) * acc_ration;
     
     angle_roll_temp += ((gyro_temp + acc_temp) * call_cycle);
     filtering_angle = angle_roll_temp + machine_mid;
     
-    // YawÖá´¦Àí£¨Ê¾Àı±£ÁôÔ­Ê¼Âß¼­£¬Ğè¸ù¾İÊµ¼ÊĞèÇóÍêÉÆ£©
+    // Yawè½´å¤„ç†ï¼ˆç¤ºä¾‹ä¿ç•™åŸå§‹é€»è¾‘ï¼Œéœ€æ ¹æ®å®é™…éœ€æ±‚å®Œå–„ï¼‰
     gyro_temp = mpu6050_gyro_transition(gz);
     acc_temp = (az - angle_yaw_temp) * acc_ration;
     angle_yaw_temp += ((gyro_temp + acc_temp) * call_cycle);

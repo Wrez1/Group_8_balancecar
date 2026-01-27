@@ -24,7 +24,7 @@ void PID_Update(PID_t *p)
 		p->ErrorInt += p->Error0;
 		
 		if (p->ErrorInt > p->ErrorIntMax) {p->ErrorInt = p->ErrorIntMax;}
-		if (p->ErrorInt < p->ErrorIntMin) {p->ErrorInt = p->ErrorIntMin;}//»ý·ÖÏÞ·ù
+		if (p->ErrorInt < p->ErrorIntMin) {p->ErrorInt = p->ErrorIntMin;}//ç§¯åˆ†é™å¹…
 	}
 	else
 	{
@@ -34,10 +34,10 @@ void PID_Update(PID_t *p)
 	p->Out = p->Kp * p->Error0
 		   + p->Ki * p->ErrorInt
 //		   + p->Kd * (p->Error0 - p->Error1);
-		   - p->Kd * (p->Actual - p->Actual1);//Î¢·ÖÏÈÐÐ
+		   - p->Kd * (p->Actual - p->Actual1);//å¾®åˆ†å…ˆè¡Œ
 	
 	if (p->Out > 0) {p->Out += p->OutOffset;}
-	if (p->Out < 0) {p->Out -= p->OutOffset;}//Êä³öÆ«ÒÆ
+	if (p->Out < 0) {p->Out -= p->OutOffset;}//è¾“å‡ºåç§»
 	
 	if (p->Out > p->OutMax) {p->Out = p->OutMax;}
 	if (p->Out < p->OutMin) {p->Out = p->OutMin;}
@@ -45,14 +45,14 @@ void PID_Update(PID_t *p)
 	p->Actual1 = p->Actual;
 }
 
-//½Ç¶È»·
+//è§’åº¦çŽ¯
 extern float yaw, pitch, roll;
 extern PID_t AnglePID;
 extern int16_t LeftPWM,RightPWM;
 extern int16_t AvePWM,DifPWM;
 void Angle_PIDControl(void)
 {
-	if (pitch > 50 || pitch < -50)	//½Ç¶È¹ý´ó±£»¤	
+	if (pitch > 50 || pitch < -50)	//è§’åº¦è¿‡å¤§ä¿æŠ¤	
 	{
 		motor_control(0, 0);
 		return;
@@ -70,7 +70,7 @@ void Angle_PIDControl(void)
 	motor_control(LeftPWM, RightPWM);
 }
 
-//ËÙ¶È»·
+//é€Ÿåº¦çŽ¯
 extern PID_t SpeedPID;
 extern float SpeedLeft,SpeedRight;
 extern float AveSpeed,DifSpeed;
@@ -87,7 +87,7 @@ void Speed_PIDControl(void)
 		AnglePID.Target=SpeedPID.Out;
 }
 
-//×ªÏò»·
+//è½¬å‘çŽ¯
 extern PID_t TurnPID;
 void Turn_PIDControl(void)
 {

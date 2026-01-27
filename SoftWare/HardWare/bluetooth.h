@@ -3,12 +3,12 @@
 #include "zf_common_headfile.h"
 #include "zf_driver_uart.h"
 
-// ¶¨ÒåÀ¶ÑÀÊ¹ÓÃµÄ´®¿ÚºÅºÍÒı½Å
+// å®šä¹‰è“ç‰™ä½¿ç”¨çš„ä¸²å£å·å’Œå¼•è„š
 #define BLUETOOTH_UART UART_6
 #define BLUETOOTH_TX_PIN UART6_TX_C6
 #define BLUETOOTH_RX_PIN UART6_RX_C7
 #define BLUETOOTH_UART_IRQn UART6_IRQn
-// ½ÓÊÕ»º³åÇøºÍ×´Ì¬±êÖ¾
+// æ¥æ”¶ç¼“å†²åŒºå’ŒçŠ¶æ€æ ‡å¿—
 extern char Bluetooth_RxPacket[100];
 extern uint8_t Bluetooth_RxFlag;
 

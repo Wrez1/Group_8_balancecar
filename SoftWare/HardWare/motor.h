@@ -3,17 +3,17 @@
 #include "zf_common_headfile.h"
 #include "zf_common_typedef.h"
 
-// TB6612Òı½Å¶¨Òå
-#define MOTOR_L_AIN1    (A2)  // ×óµç»ú·½Ïò¿ØÖÆÒı½Å1
-#define MOTOR_L_AIN2    (A3)  // ×óµç»ú·½Ïò¿ØÖÆÒı½Å2
-#define MOTOR_L_PWM     (TIM5_PWM_CH1_A0)  // ×óµç»úPWMÍ¨µÀ
+// TB6612å¼•è„šå®šä¹‰
+#define MOTOR_L_AIN1    (A2)  // å·¦ç”µæœºæ–¹å‘æ§åˆ¶å¼•è„š1
+#define MOTOR_L_AIN2    (A3)  // å·¦ç”µæœºæ–¹å‘æ§åˆ¶å¼•è„š2
+#define MOTOR_L_PWM     (TIM5_PWM_CH1_A0)  // å·¦ç”µæœºPWMé€šé“
 
-#define MOTOR_R_BIN1    (D5)  // ÓÒµç»ú·½Ïò¿ØÖÆÒı½Å1
-#define MOTOR_R_BIN2    (D6)  // ÓÒµç»ú·½Ïò¿ØÖÆÒı½Å2
-#define MOTOR_R_PWM     (TIM5_PWM_CH2_A1)  // ÓÒµç»úPWMÍ¨µÀ
+#define MOTOR_R_BIN1    (D5)  // å³ç”µæœºæ–¹å‘æ§åˆ¶å¼•è„š1
+#define MOTOR_R_BIN2    (D6)  // å³ç”µæœºæ–¹å‘æ§åˆ¶å¼•è„š2
+#define MOTOR_R_PWM     (TIM5_PWM_CH2_A1)  // å³ç”µæœºPWMé€šé“
 
-#define MAX_DUTY        (10000)  // ×î´óÕ¼¿Õ±È100%
-#define MIN_DUTY        (0)     // ×îĞ¡Õ¼¿Õ±È0%
+#define MAX_DUTY        (10000)  // æœ€å¤§å ç©ºæ¯”100%
+#define MIN_DUTY        (0)     // æœ€å°å ç©ºæ¯”0%
 
 #define PWM_MAX 8000
 #define PWM_MIN -8000

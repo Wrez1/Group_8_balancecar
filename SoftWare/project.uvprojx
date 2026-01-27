@@ -464,14 +464,14 @@
               <FilePath>.\HardWare\flash.h</FilePath>
             </File>
             <File>
-              <FileName>menu.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\HardWare\menu.h</FilePath>
-            </File>
-            <File>
               <FileName>menu.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\HardWare\menu.c</FilePath>
+            </File>
+            <File>
+              <FileName>menu.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HardWare\menu.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -17,19 +17,19 @@ void menu_save(void)
     }
     flash_buffer_clear(); 
 
-    // 保存AnglePID参数
+    // 淇濆瓨AnglePID鍙傛暟
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         flash_union_buffer[i].float_type = ((float*)&AnglePID)[i];
     }
     
-    // 保存SpeedPID参数
+    // 淇濆瓨SpeedPID鍙傛暟
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         flash_union_buffer[sizeof(PID_t)/sizeof(float) + i].float_type = ((float*)&SpeedPID)[i];
     }
     
-    // 保存TurnPID参数
+    // 淇濆瓨TurnPID鍙傛暟
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         flash_union_buffer[2*sizeof(PID_t)/sizeof(float) + i].float_type = ((float*)&TurnPID)[i];
@@ -43,19 +43,19 @@ void menu_load(void)
 {
     flash_read_page_to_buffer(FLASH_SECTION_INDEX, FLASH_PAGE_INDEX);
 
-    // 加载AnglePID参数
+    // 鍔犺浇AnglePID鍙傛暟
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         ((float*)&AnglePID)[i] = flash_union_buffer[i].float_type;
     }
     
-    // 加载SpeedPID参数
+    // 鍔犺浇SpeedPID鍙傛暟
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         ((float*)&SpeedPID)[i] = flash_union_buffer[sizeof(PID_t)/sizeof(float) + i].float_type;
     }
     
-    // 加载TurnPID参数
+    // 鍔犺浇TurnPID鍙傛暟
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         ((float*)&TurnPID)[i] = flash_union_buffer[2*sizeof(PID_t)/sizeof(float) + i].float_type;
