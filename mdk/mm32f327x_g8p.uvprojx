@@ -10,7 +10,7 @@
       <TargetName>mm32f327x_g8p_project</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>6180000::V6.18::ARMCLANG</pCCUsed>
+      <pCCUsed>6070000::V6.7::.\ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -404,6 +404,88 @@
         </Group>
         <Group>
           <GroupName>code</GroupName>
+          <Files>
+            <File>
+              <FileName>error.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\error.h</FilePath>
+            </File>
+            <File>
+              <FileName>sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>sensor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\sensor.h</FilePath>
+            </File>
+            <File>
+              <FileName>error.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\error.c</FilePath>
+            </File>
+            <File>
+              <FileName>element.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\element.c</FilePath>
+            </File>
+            <File>
+              <FileName>element.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\element.h</FilePath>
+            </File>
+            <File>
+              <FileName>encoder.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\encoder.c</FilePath>
+            </File>
+            <File>
+              <FileName>encoder.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\encoder.h</FilePath>
+            </File>
+            <File>
+              <FileName>motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>icm20602.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\icm20602.c</FilePath>
+            </File>
+            <File>
+              <FileName>icm20602.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\icm20602.h</FilePath>
+            </File>
+            <File>
+              <FileName>menu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\menu.c</FilePath>
+            </File>
+            <File>
+              <FileName>menu.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\menu.h</FilePath>
+            </File>
+            <File>
+              <FileName>madgwickahrs.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\madgwickahrs.h</FilePath>
+            </File>
+            <File>
+              <FileName>madgwickahrs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\madgwickahrs.c</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>doc</GroupName>

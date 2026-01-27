@@ -34,6 +34,8 @@
 ********************************************************************************************************************/
 
 #include "isr.h"
+#include "icm20602.h"
+#include "madgwickahrs.h"
 
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     TIM1 的定时器更新中断服务函数 启动 .s 文件定义 不允许修改函数名称
@@ -42,7 +44,31 @@
 void TIM1_UP_IRQHandler (void)
 {
     // 此处编写用户代码
+	icm20602_get_acc();
+    icm20602_get_gyro();
 
+    // 3. 转换加速度 (单位 g)
+    float ax = icm20602_acc_transition(icm20602_acc_x);
+    float ay = icm20602_acc_transition(icm20602_acc_y);
+    float az = icm20602_acc_transition(icm20602_acc_z);
+    
+    // 4. ★★★ 关键修正：去零漂 + 转弧度 ★★★
+    // 必须先减去零漂，再乘以 DEG2RAD
+    float gx = (icm20602_gyro_transition(icm20602_gyro_x) - GYRO_X_OFFSET) * DEG2RAD;
+    float gy = (icm20602_gyro_transition(icm20602_gyro_y) - GYRO_Y_OFFSET) * DEG2RAD;
+    float gz = (icm20602_gyro_transition(icm20602_gyro_z) - GYRO_Z_OFFSET) * DEG2RAD;
+
+    // 5. 传入 Madgwick 算法
+    // 注意：如果是平衡车，可能需要交换 x, y 轴或加负号，请根据实际安装方向调整
+    // 默认尝试：gx, gy, gz, ax, ay, az
+    MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
+
+    // 6. 计算最终角度放入全局变量
+    Madgwick_Get_Angles();
+    
+    // --- 5. (进阶) 惯性导航/航位推算 ---
+    // 这里是你做"导航"的地方：利用 Yaw 角将编码器速度分解到 X, Y 轴
+    // Run_Navigation_Calc();
     // 此处编写用户代码
     TIM1->SR &= ~TIM1->SR;                                                      // 清空中断状态
 }
