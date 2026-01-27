@@ -8,22 +8,19 @@ void buzzer_init()
 
 /**
  * @brief  蜂鸣器警报
- * @param  tim：时间（0手动开启，-1手动关闭）
+ * @param  tim（1开启，0关闭）
  */
 void buzzer_on(int16 tim)
 {
-	if (tim == 0)
+	if (tim == 1)
 	{
 		gpio_set_level(C11, GPIO_HIGH);
 		return;
 	}
-	if (tim == -1)
+	if (tim == 0)
 	{
 		gpio_set_level(C11, GPIO_LOW);
 		return;
 	}
 
-	gpio_set_level(C11, GPIO_HIGH);
-	system_delay_ms(tim);
-	gpio_set_level(C11, GPIO_LOW);
 }

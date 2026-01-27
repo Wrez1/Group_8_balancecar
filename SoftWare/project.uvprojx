@@ -443,6 +443,16 @@
               <FileType>5</FileType>
               <FilePath>.\HardWare\pid.h</FilePath>
             </File>
+            <File>
+              <FileName>led.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\HardWare\led.c</FilePath>
+            </File>
+            <File>
+              <FileName>led.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\HardWare\led.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
