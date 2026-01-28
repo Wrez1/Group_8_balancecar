@@ -90,20 +90,33 @@ PID_t TurnPID = {
 
 uint8 xp=1,yp=0;
 
-int main(void)
-{
-	menu_load(); 
-	debug_init();
-	clock_init(SYSTEM_CLOCK_120M);
-	key_init(10);
-	tft180_init();
-	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
-	tft180_clear();
-	while(1){
-		menu_save();
-		menu(&xp,&yp,&SpeedPID.Kp,&SpeedPID.Ki,&SpeedPID.Kd);
-		menu_save();
-		key_scanner();
-		system_delay_ms(10);
-	}
+//int main(void)
+//{
+//	menu_load(); 
+//	debug_init();
+//	clock_init(SYSTEM_CLOCK_120M);
+//	key_init(10);
+//	tft180_init();
+//	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+//	tft180_clear();
+//	while(1){
+//		menu_save();
+//		menu(&xp,&yp,&SpeedPID.Kp,&SpeedPID.Ki,&SpeedPID.Kd);
+//		menu_save();
+//		key_scanner();
+//		system_delay_ms(10);
+//	}
+//}
+
+int main() {
+    clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
+    debug_init();                                                               // 初始化默认 Debug UART
+	
+    encoder_init();
+    motor_init();
+    
+    motor_control(2000, 4000);
+
+    
+    return 0;
 }

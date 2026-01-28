@@ -4,7 +4,7 @@
 void motor_init()
 {
     // 1. 初始化方向引脚 (设置为推挽输出)
-    // 左电机方向 A0，右电机方向 A2
+    // 左电机方向 A2 A3，右电机方向 D5 D6
     gpio_init(MOTOR_L_DIR_PIN1, GPO, 0, GPO_PUSH_PULL);
     gpio_init(MOTOR_R_DIR_PIN1, GPO, 0, GPO_PUSH_PULL);
 	gpio_init(MOTOR_L_DIR_PIN2, GPO, 0, GPO_PUSH_PULL);
@@ -12,7 +12,7 @@ void motor_init()
 	
     
     // 2. 初始化 PWM 引脚
-    // 左电机PWM A1，右电机PWM A3
+    // 左电机PWM A0，右电机PWM A1
     // 频率建议 17kHz - 20kHz
     pwm_init(MOTOR_L_PWM_PIN, 17000, 0);
     pwm_init(MOTOR_R_PWM_PIN, 17000, 0);
@@ -48,3 +48,5 @@ void motor_control(int16_t speed_left, int16_t speed_right)
     // 设置占空比
     pwm_set_duty(MOTOR_R_PWM_PIN, ABS(speed_right));
 }
+
+
