@@ -262,8 +262,8 @@ uint8 icm20602_init (void)
 
         icm20602_write_register(ICM20602_PWR_MGMT_1,     0x01);                 // 时钟设置
         icm20602_write_register(ICM20602_PWR_MGMT_2,     0x00);                 // 开启陀螺仪和加速度计
-        icm20602_write_register(ICM20602_CONFIG,         0x01);                 // 176HZ 1KHZ
-        icm20602_write_register(ICM20602_SMPLRT_DIV,     0x07);                 // 采样速率 SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV)
+        icm20602_write_register(ICM20602_CONFIG,         0x03);                 // 176HZ 1KHZ
+        icm20602_write_register(ICM20602_SMPLRT_DIV,     0x04);                 // 采样速率 SAMPLE_RATE = INTERNAL_SAMPLE_RATE / (1 + SMPLRT_DIV)
 
         // ICM20602_ACCEL_CONFIG 寄存器
         // 设置为 0x00 加速度计量程为 ±2  g   获取到的加速度计数据除以 16384  可以转化为带物理单位的数据 (g 代表重力加速度 物理学名词 一般情况下 g 取 9.8 m/s^2 为标准值)

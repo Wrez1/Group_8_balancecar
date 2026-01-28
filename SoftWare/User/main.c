@@ -37,7 +37,6 @@
 #include "motor.h"
 #include "encoder.h"
 #include "pid.h"
-#include "mpu6050.h"
 float Gyro_X_Offset, Gyro_Y_Offset, Gyro_Z_Offset;
 float gyro_yaw = 0, gyro_pitch = 0, gyro_roll = 0;
 float acc_yaw = 0, acc_pitch = 0, acc_roll = 0;
