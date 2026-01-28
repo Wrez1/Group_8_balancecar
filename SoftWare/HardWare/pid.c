@@ -50,6 +50,10 @@ extern float yaw, pitch, roll;
 extern PID_t AnglePID;
 extern int16_t LeftPWM,RightPWM;
 extern int16_t AvePWM,DifPWM;
+extern PID_t SpeedPID;
+extern PID_t TurnPID;
+extern float SpeedLeft,SpeedRight;
+extern float AveSpeed,DifSpeed;
 void Angle_PIDControl(void)
 {
 	if (pitch > 50 || pitch < -50)	//角度过大保护	
@@ -59,8 +63,8 @@ void Angle_PIDControl(void)
 	}
 	AnglePID.Actual = pitch;
 	PID_Update(&AnglePID);
+	AvePWM = -AnglePID.Out;
 	
-	AvePWM = AnglePID.Out;
 	LeftPWM = AvePWM + DifPWM / 2;
 	RightPWM = AvePWM - DifPWM / 2;
 	
@@ -76,8 +80,8 @@ extern float SpeedLeft,SpeedRight;
 extern float AveSpeed,DifSpeed;
 void Speed_PIDControl(void)
 {
-		SpeedLeft=Get_Encoder2();
-		SpeedRight=Get_Encoder1();
+		SpeedLeft=Get_Count2();
+		SpeedRight=Get_Count1();
 		pit_encoder_handler();
 		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
 		DifSpeed=SpeedLeft-SpeedRight;
@@ -85,14 +89,18 @@ void Speed_PIDControl(void)
 		SpeedPID.Actual=AveSpeed;
 		PID_Update(&SpeedPID);
 		AnglePID.Target=SpeedPID.Out;
+	
+		TurnPID.Actual = DifSpeed;
+		PID_Update(&TurnPID);
+		DifPWM = TurnPID.Out;
 }
 
 //转向环
 extern PID_t TurnPID;
 void Turn_PIDControl(void)
 {
-		SpeedLeft=Get_Encoder2();
-		SpeedRight=Get_Encoder1();
+		SpeedLeft=Get_Count2();
+		SpeedRight=Get_Count1();
 		pit_encoder_handler();
 		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
 		DifSpeed=SpeedLeft-SpeedRight;

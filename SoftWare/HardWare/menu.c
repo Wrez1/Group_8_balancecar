@@ -256,6 +256,7 @@ void showplace6(uint8 x,uint8 che,float kp,float ki,float kd){
 uint8 che=0;
 
 void menu(uint8* xp,uint8* yp,float* kp,float* ki,float* kd){
+	tft180_set_font (0);
 	if(*yp==0){
 			
 		showpalce0(*xp);
