@@ -37,6 +37,8 @@
 #include "motor.h"
 #include "encoder.h"
 #include "pid.h"
+#include "flash.h"
+#include "menu.h"
 float Gyro_X_Offset, Gyro_Y_Offset, Gyro_Z_Offset;
 float gyro_yaw = 0, gyro_pitch = 0, gyro_roll = 0;
 float acc_yaw = 0, acc_pitch = 0, acc_roll = 0;
@@ -64,8 +66,8 @@ PID_t AnglePID = {
 
 PID_t SpeedPID = {
 	.Kp = 2,
-	.Ki = 0.05,
-	.Kd = 0,
+	.Ki = 5,
+	.Kd = 1,
 	
 	.OutMax = 20,
 	.OutMin = -20,
@@ -86,21 +88,22 @@ PID_t TurnPID = {
 	.ErrorIntMin = -20,
 };
 
-// 主函数
+uint8 xp=1,yp=0;
+
 int main(void)
 {
-    clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
-    debug_init();                                                               // 初始化默认 Debug UART
-    // 初始化电机模块
-    motor_init();
-    encoder_init();
-    
-    while (1)
-    {
-        // 左右电机同速正转（前进）
-        motor_control(7000, 7000);
-		
-    }
-    
-    return 0;
+	menu_load(); 
+	debug_init();
+	clock_init(SYSTEM_CLOCK_120M);
+	key_init(10);
+	tft180_init();
+	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+	tft180_clear();
+	while(1){
+		menu_save();
+		menu(&xp,&yp,&SpeedPID.Kp,&SpeedPID.Ki,&SpeedPID.Kd);
+		menu_save();
+		key_scanner();
+		system_delay_ms(10);
+	}
 }

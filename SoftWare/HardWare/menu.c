@@ -196,9 +196,9 @@ void showplace6(uint8 x,uint8 che,float kp,float ki,float kd){
 			tft180_show_string( 0, 50, "  >KP:                 ");
 			tft180_show_string( 0, 70, "   KI:                 ");
 			tft180_show_string( 0, 90, "   KD:                 ");
-			tft180_show_float(40,50,kp,1,1);
-			tft180_show_float(40,70,ki,1,1);
-			tft180_show_float(40,90,kd,1,1);
+			tft180_show_float(40,50,kp,2,2);
+			tft180_show_float(40,70,ki,2,2);
+			tft180_show_float(40,90,kd,2,2);
 			tft180_show_string(0,60 ,"                         ");
 			tft180_show_string(0,80 ,"                         ");
 			tft180_show_string(0,100,"                         ");
@@ -208,9 +208,9 @@ void showplace6(uint8 x,uint8 che,float kp,float ki,float kd){
 			tft180_show_string( 0, 50, "   KP:                 ");
 			tft180_show_string( 0, 70, "  >KI:                 ");
 			tft180_show_string( 0, 90, "   KD:                 ");
-			tft180_show_float(40,50,kp,1,1);
-			tft180_show_float(40,70,ki,1,1);
-			tft180_show_float(40,90,kd,1,1);
+			tft180_show_float(40,50,kp,2,2);
+			tft180_show_float(40,70,ki,2,2);
+			tft180_show_float(40,90,kd,2,2);
 			tft180_show_string(0,60 ,"                         ");
 			tft180_show_string(0,80 ,"                         ");
 			tft180_show_string(0,100,"                         ");
@@ -220,9 +220,9 @@ void showplace6(uint8 x,uint8 che,float kp,float ki,float kd){
 			tft180_show_string( 0, 50, "   KP:                 ");
 			tft180_show_string( 0, 70, "   KI:                 ");
 			tft180_show_string( 0, 90, "  >KD:                 ");
-			tft180_show_float(40,50,kp,1,1);
-			tft180_show_float(40,70,ki,1,1);
-			tft180_show_float(40,90,kd,1,1);
+			tft180_show_float(40,50,kp,2,2);
+			tft180_show_float(40,70,ki,2,2);
+			tft180_show_float(40,90,kd,2,2);
 			tft180_show_string(0,60 ,"                         ");
 			tft180_show_string(0,80 ,"                         ");
 			tft180_show_string(0,100,"                         ");
