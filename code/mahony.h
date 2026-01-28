@@ -1,38 +1,34 @@
 //=====================================================================================================
-// MadgwickAHRS.h
+// MahonyAHRS.h
 //=====================================================================================================
 //
-// Implementation of Madgwick's IMU and AHRS algorithms.
+// Madgwick's implementation of Mayhony's AHRS algorithm.
 // See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
 //
-// Date			Author          Notes
+// Date			Author			Notes
 // 29/09/2011	SOH Madgwick    Initial release
 // 02/10/2011	SOH Madgwick	Optimised for reduced CPU load
 //
 //=====================================================================================================
-#ifndef madgwickahrs_h
-#define madgwickahrs_h
+#ifndef MahonyAHRS_h
+#define MahonyAHRS_h
 
-// 举例：如果静止时串口打印 gyroX=1.2, 则填 1.2
-//#define GYRO_X_OFFSET  0.0f 
-//#define GYRO_Y_OFFSET  0.0f
-//#define GYRO_Z_OFFSET  0.0f
-
-// 角度转弧度系数 (PI / 180)
-#define DEG2RAD  0.01745329f
-
+extern float Gyro_X_Offset;
+extern float Gyro_Y_Offset;
+extern float Gyro_Z_Offset;
 //----------------------------------------------------------------------------------------------------
 // Variable declaration
 
-extern volatile float beta;				// algorithm gain
+extern volatile float twoKp;			// 2 * proportional gain (Kp)
+extern volatile float twoKi;			// 2 * integral gain (Ki)
 extern volatile float q0, q1, q2, q3;	// quaternion of sensor frame relative to auxiliary frame
 
 //---------------------------------------------------------------------------------------------------
 // Function declarations
 
-void MadgwickAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
-void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
-void Madgwick_Get_Angles(void);
+void MahonyAHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
+void MahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
+void Mahony_Get_Angles(void);
 #endif
 //=====================================================================================================
 // End of file

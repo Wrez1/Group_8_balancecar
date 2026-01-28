@@ -3,7 +3,9 @@
 #include "encoder.h"
 #include "icm20602.h"
 #include "menu.h"
-#include "madgwickahrs.h"
+#include "mahony.h"
+
+
 int main(void)
 {
     // 1. 基础时钟初始化 (MM32F327通常是120M)
@@ -16,6 +18,7 @@ int main(void)
 	encoder_init();
 	IMU_Init_Task();
 	motor_init();
+	IMU_Calibration();
 	pit_ms_init(TIM1_PIT, 5);
     while(1)
     {

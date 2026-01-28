@@ -476,14 +476,14 @@
               <FilePath>..\code\menu.h</FilePath>
             </File>
             <File>
-              <FileName>madgwickahrs.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\code\madgwickahrs.h</FilePath>
+              <FileName>mahony.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\mahony.c</FilePath>
             </File>
             <File>
-              <FileName>madgwickahrs.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\code\madgwickahrs.c</FilePath>
+              <FileName>mahony.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\mahony.h</FilePath>
             </File>
           </Files>
         </Group>

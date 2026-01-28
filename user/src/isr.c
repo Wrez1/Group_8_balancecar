@@ -35,42 +35,72 @@
 
 #include "isr.h"
 #include "icm20602.h"
-#include "madgwickahrs.h"
+#include "mahony.h"
 
+float Gyro_X_Offset = 0.0f;
+float Gyro_Y_Offset = 0.0f;
+float Gyro_Z_Offset = 0.0f;
+
+#define GYRO_DEAD_ZONE  0.4f
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     TIM1 的定时器更新中断服务函数 启动 .s 文件定义 不允许修改函数名称
 //              默认优先级 修改优先级使用 interrupt_set_priority(TIM1_UP_IRQn, 1);
 //-------------------------------------------------------------------------------------------------------------------
 void TIM1_UP_IRQHandler (void)
 {
-    // 此处编写用户代码
-	icm20602_get_acc();
+	
+    icm20602_get_acc();
     icm20602_get_gyro();
 
-    // 3. 转换加速度 (单位 g)
+    // 1. 转换加速度 (单位 g)
     float ax = icm20602_acc_transition(icm20602_acc_x);
     float ay = icm20602_acc_transition(icm20602_acc_y);
     float az = icm20602_acc_transition(icm20602_acc_z);
     
-    // 4. ★★★ 关键修正：去零漂 + 转弧度 ★★★
-    // 必须先减去零漂，再乘以 DEG2RAD
-    float gx = (icm20602_gyro_transition(icm20602_gyro_x) - GYRO_X_OFFSET) * DEG2RAD;
-    float gy = (icm20602_gyro_transition(icm20602_gyro_y) - GYRO_Y_OFFSET) * DEG2RAD;
-    float gz = (icm20602_gyro_transition(icm20602_gyro_z) - GYRO_Z_OFFSET) * DEG2RAD;
+	/*
+	if (fabsf(Speed_L) < 2.0f && fabsf(Speed_R) < 2.0f) 
+    {
+        // 2. 判断是否“手扶稳定”
+        // 当前陀螺仪读数波动不能太大，防止你手扶着车在晃，导致错误的校准
+        // 假设当前读数和之前的 Offset 相差在 2度/秒以内，说明是温漂，而不是运动
+        if (fabsf(raw_gz - Gyro_Z_Offset) < 2.0f) 
+        {
+            // 3. 核心：指数加权移动平均 (EMA)
+            // 让 Offset 极其缓慢地“爬”向当前的读数
+            // 0.001 是更新速度，越小越慢越稳。意味着每次修正 0.1% 的误差
+            Gyro_Z_Offset = Gyro_Z_Offset * 0.999f + raw_gz * 0.001f;
+        }
+        
+        // 4. 既然停着，直接锁死输出为 0 (强力死区)
+        gz_deg = 0.0f;
+    }
+    else 
+    {
+        // 车动的时候，使用动态更新后的 Offset
+        gz_deg = raw_gz - Gyro_Z_Offset;
+    }
+	*/
+	
+    // 2. 转换陀螺仪 (先减零漂，再转弧度！)
+    // 死区逻辑保留！这对 Mahony 同样有效
+    float gx_deg = icm20602_gyro_transition(icm20602_gyro_x) - Gyro_X_Offset;
+    float gy_deg = icm20602_gyro_transition(icm20602_gyro_y) - Gyro_Y_Offset;
+    float gz_deg = icm20602_gyro_transition(icm20602_gyro_z) - Gyro_Z_Offset;
 
-    // 5. 传入 Madgwick 算法
-    // 注意：如果是平衡车，可能需要交换 x, y 轴或加负号，请根据实际安装方向调整
-    // 默认尝试：gx, gy, gz, ax, ay, az
-    MadgwickAHRSupdateIMU(gx, gy, gz, ax, ay, az);
+    if (gz_deg > -GYRO_DEAD_ZONE && gz_deg < GYRO_DEAD_ZONE) gz_deg = 0.0f; // 死区
 
-    // 6. 计算最终角度放入全局变量
-    Madgwick_Get_Angles();
-    
-    // --- 5. (进阶) 惯性导航/航位推算 ---
-    // 这里是你做"导航"的地方：利用 Yaw 角将编码器速度分解到 X, Y 轴
-    // Run_Navigation_Calc();
-    // 此处编写用户代码
-    TIM1->SR &= ~TIM1->SR;                                                      // 清空中断状态
+    float gx = gx_deg * 0.0174533f; // 转弧度
+    float gy = gy_deg * 0.0174533f;
+    float gz = gz_deg * 0.0174533f;
+
+    // 3. ★调用 Mahony 算法★
+    // 注意：如果是平衡车，Pitch/Roll 颠倒的话，交换 ax/ay 或 gx/gy
+    MahonyAHRSupdateIMU(gx, gy, gz, ax, ay, az);
+
+    // 4. 计算角度
+    Mahony_Get_Angles();
+	
+	TIM1->SR &= ~TIM1->SR;
 }
 
 //-------------------------------------------------------------------------------------------------------------------

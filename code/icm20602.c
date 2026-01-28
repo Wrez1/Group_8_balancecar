@@ -185,3 +185,32 @@ void IMU_Get_Data_Task(float dt)
     // 6. 惯性导航数据计算 (为速度环或位移估算提供数据)
     IMU_Inertial_Nav_Calc(accX, accY, accZ, Car_Attitude.Pitch, Car_Attitude.Roll);
 }
+
+// === 校准函数定义 ===
+// 放在 main 函数前面，或者单独的文件里都可以
+void IMU_Calibration(void)
+{
+    float sum_x = 0, sum_y = 0, sum_z = 0;
+    
+    // 提示信息 (如果有屏幕)
+    // tft180_show_string(0, 0, "Calibrating..."); 
+    
+    // 循环读取 500 次 (车子必须绝对静止！)
+    for(int i = 0; i < 500; i++)
+    {
+        icm20602_get_gyro();
+        // 注意：这里要用转换后的物理值 (deg/s) 累加
+        sum_x += icm20602_gyro_transition(icm20602_gyro_x);
+        sum_y += icm20602_gyro_transition(icm20602_gyro_y);
+        sum_z += icm20602_gyro_transition(icm20602_gyro_z);
+        system_delay_ms(2); // 延时 2ms，总耗时约 1秒
+    }
+    
+    // 求平均值，更新全局偏移量
+    Gyro_X_Offset = sum_x / 500.0f;
+    Gyro_Y_Offset = sum_y / 500.0f;
+    Gyro_Z_Offset = sum_z / 500.0f;
+    
+    // 打印调试，看看校准了多少
+    // printf("Offset: %.3f, %.3f, %.3f\r\n", Gyro_X_Offset, Gyro_Y_Offset, Gyro_Z_Offset);
+}
