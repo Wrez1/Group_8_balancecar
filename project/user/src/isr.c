@@ -40,7 +40,6 @@
 #include "navigation.h"
 #include "motor.h"
 
-
 // 惯导用的累积里程
 int64 Total_Encoder_L = 0;
 int64 Total_Encoder_R = 0;
@@ -48,7 +47,7 @@ int64 Total_Encoder_R = 0;
 // 外部引用
 extern PID_t SpeedPID; // 速度环会更新 SpeedLeft/Right
 extern float SpeedLeft, SpeedRight;
-
+extern uint8_t balance_mode_active;
 // 速度环分频计数器
 static uint8_t Speed_Loop_Count = 0;
 
@@ -60,7 +59,7 @@ void TIM1_UP_IRQHandler (void)
 {
 	// 一句话搞定所有读取和解算，传入 dt = 0.005 (5ms)
 	IMU_Get_Data_Task(0.005f);
-    
+
 	
 	// === 2. 速度环与惯导 (20ms 分频) ===
     Speed_Loop_Count++;
@@ -98,7 +97,6 @@ void TIM1_UP_IRQHandler (void)
     }
 	
 	Angle_Gyro_Cascade_Control();
-	
 	
 	TIM1->SR &= ~TIM1->SR;
 }

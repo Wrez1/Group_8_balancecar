@@ -1,5 +1,5 @@
 #include "zf_common_headfile.h"
-#include "motor.h"  // 务必包含你自己写的头文件
+#include "motor.h"
 #include "encoder.h"
 #include "icm20602.h"
 #include "menu.h"
@@ -20,6 +20,9 @@ extern float Mechanical_Zero_Pitch;
 // 菜单变量
 uint8_t menu_xp = 0;
 uint8_t menu_yp = 1;
+
+// 模式状态标志
+uint8_t balance_mode_active = 0;  // 0:不运行平衡模式, 1:运行平衡模式
 
 // 蓝牙接收缓冲区
 char rx_buffer[64];
@@ -91,14 +94,16 @@ int main(void)
 	encoder_init();
     IMU_Init_Task();
     motor_init();
-//	All_PID_Init(); 
-//	pit_ms_init(TIM1_PIT, 5);
+	All_PID_Init(); 
 //	flash_load();
 //	flash_load_mech_zero();
 	while(1){
-		flash_save();
+		if (balance_mode_active) {
+			pit_ms_init(TIM1_PIT, 5);
+		}
+//		flash_save();
 		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
-		flash_save();
+//		flash_save();
 		key_scanner();
 		system_delay_ms(10);
 	}

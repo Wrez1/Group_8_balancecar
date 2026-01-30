@@ -3,6 +3,7 @@
 #include "motor.h"
 #include "encoder.h"
 #include "icm20602.h"
+extern uint8_t balance_mode_active;
 void PID_Init(PID_t *p)
 {
 	p->Target = 0;
@@ -117,7 +118,10 @@ extern PID_t GyroPID;           // 新增
 float Target_Gyro = 0.0f;
 
 void Angle_Gyro_Cascade_Control(void)
-{
+{ 
+//    if (!balance_mode_active) {
+//        motor_control(0, 0);
+//	}
     float AvePWM;
     
     // ==========================================
