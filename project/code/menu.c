@@ -160,7 +160,7 @@ void showplace3(uint8 x){
 			tft180_show_string(0,80 ,"                        ");
 			tft180_show_string(0,90 ,"                        ");
 			tft180_show_string(0,100,"                        ");
-
+            tft180_show_string(0,110,"                        ");
 		    break;
 		case 2:
 			tft180_show_string(0, 10, "    MODE 3: run 8      ");
@@ -170,6 +170,7 @@ void showplace3(uint8 x){
 			tft180_show_string(0,80 ,"                        ");
 			tft180_show_string(0,90 ,"                        ");
 			tft180_show_string(0,100,"                        ");
+		    tft180_show_string(0,110,"                        ");
 			break;
 	}
 }
@@ -184,6 +185,7 @@ void showplace4(uint8 x){
 			tft180_show_string(0,80 ,"                        ");
 			tft180_show_string(0,90 ,"                        ");
 			tft180_show_string(0,100,"                        ");
+		    tft180_show_string(0,110,"                        ");
 		    break;
 		case 2:
 			tft180_show_string(0, 10, "    MODE 4: path memory");
@@ -193,6 +195,7 @@ void showplace4(uint8 x){
 			tft180_show_string(0,80 ,"                        ");
 			tft180_show_string(0,90 ,"                        ");
 			tft180_show_string(0,100,"                        ");
+		    tft180_show_string(0,110,"                        ");
 			break;
 	}
 }
@@ -207,6 +210,7 @@ void showplace5(uint8 x){
 			tft180_show_string(0,80 ,"                        ");
 			tft180_show_string(0,90 ,"                        ");
 			tft180_show_string(0,100,"                        ");
+		    tft180_show_string(0,110,"                        ");
 		    break;
 		case 2:
 			tft180_show_string(0, 10, "    MODE 5: remote     ");
@@ -216,6 +220,7 @@ void showplace5(uint8 x){
 			tft180_show_string(0,80 ,"                        ");
 			tft180_show_string(0,90 ,"                        ");
 			tft180_show_string(0,100,"                        ");
+		    tft180_show_string(0,110,"                        ");
 			break;
 	}
 }
@@ -225,12 +230,6 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
                 PID_Params* angle_pid, 
                 PID_Params* speed_pid, 
                 PID_Params* turn_pid) {
-    // 显示编辑模式提示
-    if(che != 0) {
-        tft180_show_string(100, 10, "+");
-    } else {
-        tft180_show_string(100, 10, "-");
-    }
     
     // 根据选择的环显示不同的标题
     switch(ring_sel) {
@@ -241,22 +240,22 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
             // 根据参数选择显示光标
             if(param_sel == 1) {
                 tft180_show_string(0, 50, " >KP:                ");
-                tft180_show_string(0, 70, "  KI:                   ");
-                tft180_show_string(0, 90, "  KD:                   ");
+                tft180_show_string(0, 70, "  KI:                    ");
+                tft180_show_string(0, 90, "  KD:                    ");
             } else if(param_sel == 2) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, " >KI:                   ");
-                tft180_show_string(0, 90, "  KD:                   ");
+                tft180_show_string(0, 70, " >KI:                    ");
+                tft180_show_string(0, 90, "  KD:                    ");
             } else if(param_sel == 3) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, "  KI:                   ");
-                tft180_show_string(0, 90, " >KD:                   ");
+                tft180_show_string(0, 70, "  KI:                    ");
+                tft180_show_string(0, 90, " >KD:                    ");
             }
             
             // 显示角度环PID值
-            tft180_show_float(40, 50, angle_pid->Kp, 1, 4);
-            tft180_show_float(40, 70, angle_pid->Ki, 1, 4);
-            tft180_show_float(40, 90, angle_pid->Kd, 1, 4);
+            tft180_show_float(40, 50, angle_pid->Kp, 2, 4);
+            tft180_show_float(40, 70, angle_pid->Ki, 2, 4);
+            tft180_show_float(40, 90, angle_pid->Kd, 2, 4);
             break;
             
         case 2:  // 速度环
@@ -266,22 +265,22 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
             // 根据参数选择显示光标
             if(param_sel == 1) {
                 tft180_show_string(0, 50, " >KP:                ");
-                tft180_show_string(0, 70, "  KI:                   ");
-                tft180_show_string(0, 90, "  KD:                   ");
+                tft180_show_string(0, 70, "  KI:                    ");
+                tft180_show_string(0, 90, "  KD:                    ");
             } else if(param_sel == 2) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, " >KI:                   ");
-                tft180_show_string(0, 90, "  KD:                   ");
+                tft180_show_string(0, 70, " >KI:                    ");
+                tft180_show_string(0, 90, "  KD:                    ");
             } else if(param_sel == 3) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, "  KI:                   ");
-                tft180_show_string(0, 90, " >KD:                   ");
+                tft180_show_string(0, 70, "  KI:                    ");
+                tft180_show_string(0, 90, " >KD:                    ");
             }
             
             // 显示速度环PID值
-            tft180_show_float(40, 50, speed_pid->Kp, 1, 4);
-            tft180_show_float(40, 70, speed_pid->Ki, 1, 4);
-            tft180_show_float(40, 90, speed_pid->Kd, 1, 4);
+            tft180_show_float(40, 50, speed_pid->Kp, 2, 4);
+            tft180_show_float(40, 70, speed_pid->Ki, 2, 4);
+            tft180_show_float(40, 90, speed_pid->Kd, 2, 4);
             break;
             
         case 3:  // 转向环
@@ -291,22 +290,22 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
             // 根据参数选择显示光标
             if(param_sel == 1) {
                 tft180_show_string(0, 50, " >KP:                ");
-                tft180_show_string(0, 70, "  KI:                   ");
-                tft180_show_string(0, 90, "  KD:                   ");
+                tft180_show_string(0, 70, "  KI:                    ");
+                tft180_show_string(0, 90, "  KD:                    ");
             } else if(param_sel == 2) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, " >KI:                   ");
-                tft180_show_string(0, 90, "  KD:                   ");
+                tft180_show_string(0, 70, " >KI:                    ");
+                tft180_show_string(0, 90, "  KD:                    ");
             } else if(param_sel == 3) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, "  KI:                   ");
-                tft180_show_string(0, 90, " >KD:                   ");
+                tft180_show_string(0, 70, "  KI:                    ");
+                tft180_show_string(0, 90, " >KD:                    ");
             }
             
             // 显示转向环PID值
-            tft180_show_float(40, 50, turn_pid->Kp, 1, 4);
-            tft180_show_float(40, 70, turn_pid->Ki, 1, 4);
-            tft180_show_float(40, 90, turn_pid->Kd, 1, 4);
+            tft180_show_float(40, 50, turn_pid->Kp, 2, 4);
+            tft180_show_float(40, 70, turn_pid->Ki, 2, 4);
+            tft180_show_float(40, 90, turn_pid->Kd, 2, 4);
             break;
     }
     
@@ -318,9 +317,9 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
     // 显示当前选择的环
     tft180_show_string(0, 110, "Ring:  ");
     switch(ring_sel) {
-        case 1: tft180_show_string(40, 110, "Angle"); break;
-        case 2: tft180_show_string(40, 110, "Speed"); break;
-        case 3: tft180_show_string(40, 110, "Turn "); break;
+        case 1: tft180_show_string(40, 110, "Angle      "); break;
+        case 2: tft180_show_string(40, 110, "Speed      "); break;
+        case 3: tft180_show_string(40, 110, "Turn       "); break;
     }
 }
 

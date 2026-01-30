@@ -54,10 +54,10 @@ extern PID_t TurnPID;
 extern float SpeedLeft,SpeedRight;
 extern float AveSpeed,DifSpeed;
 
-float Mechanical_Zero_Pitch = 3.00924f;
+float Mechanical_Zero_Pitch = 1.80f;
 void Angle_PIDControl(void)
 {
-	if (Car_Attitude.Pitch > 50 || Car_Attitude.Pitch < -50)	//角度过大保护	
+	if (Car_Attitude.Pitch > 70 || Car_Attitude.Pitch < -70)	//角度过大保护	
 	{
 		motor_control(0, 0);
 		return;
@@ -81,8 +81,8 @@ extern float SpeedLeft,SpeedRight;
 extern float AveSpeed,DifSpeed;
 void Speed_PIDControl(void)
 {
-		SpeedLeft=Get_Count2();
-		SpeedRight=Get_Count1();
+		SpeedLeft=(int16_t)Get_Count1();
+		SpeedRight=(int16_t)Get_Count1();
 		pit_encoder_handler();
 		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
 		DifSpeed=SpeedLeft-SpeedRight;
@@ -100,8 +100,8 @@ void Speed_PIDControl(void)
 extern PID_t TurnPID;
 void Turn_PIDControl(void)
 {
-		SpeedLeft=Get_Count2();
-		SpeedRight=Get_Count1();
+		SpeedLeft=(int16_t)Get_Count1();
+		SpeedRight=(int16_t)Get_Count1();
 		pit_encoder_handler();
 		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
 		DifSpeed=SpeedLeft-SpeedRight;
@@ -113,12 +113,8 @@ void Turn_PIDControl(void)
 
 extern Attitude_t Car_Attitude; // 你的姿态结构体
 extern PID_t GyroPID;           // 新增
-extern int16_t icm20602_gyro_y; // 或者是转换后的 float gyro_y (角速度原始值)
-float Real_Gyro_X;
+//extern int16_t icm20602_gyro_y; // 或者是转换后的 float gyro_y (角速度原始值)
 float Target_Gyro = 0.0f;
-
-// ★★★ 新增：机械中值外部声明 ★★★
-extern float Mechanical_Zero_Pitch;
 
 void Angle_Gyro_Cascade_Control(void)
 {
@@ -153,7 +149,7 @@ void Angle_Gyro_Cascade_Control(void)
     PID_Update(&AnglePID);
     
     // 外环输出 = 内环目标
-    float Target_Gyro = AnglePID.Out; 
+    float Target_Gyro = -AnglePID.Out; 
     
     // ==========================================
     // 4. 内环：角速度环 (PD控制)
@@ -163,7 +159,7 @@ void Angle_Gyro_Cascade_Control(void)
     GyroPID.Target = Target_Gyro;
     
     // ★★★ 修正：使用 X 轴角速度 (因为你的Mahony第2个参数是gx) ★★★
-    GyroPID.Actual = Real_Gyro_X; 
+	GyroPID.Actual = Real_Gyro_X;
     
     // 计算 PID (通常内环只有 P 和 D，Ki=0)
     PID_Update(&GyroPID);
@@ -173,7 +169,7 @@ void Angle_Gyro_Cascade_Control(void)
     // 我们需要电机向前转(正PWM)来平衡，所以这里可能不需要负号，或者需要负号
     // 这取决于你的 motor_control 逻辑和传感器安装方向。
     // 如果发现车子加速倒下，请把这里的符号取反！
-    AvePWM = -GyroPID.Out; 
+    AvePWM = GyroPID.Out; 
 
     // ==========================================
     // 5. 转向环叠加 & 电机输出
