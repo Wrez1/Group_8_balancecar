@@ -22,79 +22,79 @@ void showpalce0(uint8 x){
         case 1:
             tft180_show_string(0,10, "    MAIN MENU          ");
             tft180_show_string(0,30, "----------------");
-            tft180_show_string(0,50," >MODE1: balance");
+            tft180_show_string(0,50," >MODE1: balance    ");
             tft180_show_string(0,60,"  MODE2: run circle");
             tft180_show_string(0,70,"  MODE3: run 8");
             tft180_show_string(0,80,"  MODE4: path memory");
             tft180_show_string(0,90,"  MODE5: remote control");
             tft180_show_string(0,100,"  PID setting");
-            tft180_show_string(0,110,"  Mechanical zero      ");  // ★★★ 新增项 ★★★
+            tft180_show_string(0,110,"  Mechanical zero         ");  // ★★★ 新增项 ★★★
             break;
         case 2:
             tft180_show_string(0,10, "    MAIN MENU          ");
             tft180_show_string(0,30, "----------------");
-            tft180_show_string(0,50,"  MODE1: balance");
+            tft180_show_string(0,50,"  MODE1: balance    ");
             tft180_show_string(0,60," >MODE2: run circle");
             tft180_show_string(0,70,"  MODE3: run 8");
             tft180_show_string(0,80,"  MODE4: path memory");
             tft180_show_string(0,90,"  MODE5: remote control");
             tft180_show_string(0,100,"  PID setting");
-            tft180_show_string(0,110,"  Mechanical zero      ");
+            tft180_show_string(0,110,"  Mechanical zero        ");
             break;
         case 3:
             tft180_show_string(0,10, "    MAIN MENU          ");
             tft180_show_string(0,30, "----------------");
-            tft180_show_string(0,50,"  MODE1: balance");
+            tft180_show_string(0,50,"  MODE1: balance    ");
             tft180_show_string(0,60,"  MODE2: run circle");
             tft180_show_string(0,70," >MODE3: run 8");
             tft180_show_string(0,80,"  MODE4: path memory");
             tft180_show_string(0,90,"  MODE5: remote control");
             tft180_show_string(0,100,"  PID setting");
-            tft180_show_string(0,110,"  Mechanical zero      ");
+            tft180_show_string(0,110,"  Mechanical zero        ");
             break;
         case 4:
             tft180_show_string(0,10, "    MAIN MENU          ");
             tft180_show_string(0,30, "----------------");
-            tft180_show_string(0,50,"  MODE1: balance");
+            tft180_show_string(0,50,"  MODE1: balance    ");
             tft180_show_string(0,60,"  MODE2: run circle");
             tft180_show_string(0,70,"  MODE3: run 8");
             tft180_show_string(0,80," >MODE4: path memory");
             tft180_show_string(0,90,"  MODE5: remote control");
             tft180_show_string(0,100,"  PID setting");
-            tft180_show_string(0,110,"  Mechanical zero      ");
+            tft180_show_string(0,110,"  Mechanical zero        ");
             break;
         case 5:
             tft180_show_string(0,10, "    MAIN MENU          ");
             tft180_show_string(0,30, "----------------");
-            tft180_show_string(0,50,"  MODE1: balance");
+            tft180_show_string(0,50,"  MODE1: balance    ");
             tft180_show_string(0,60,"  MODE2: run circle");
             tft180_show_string(0,70,"  MODE3: run 8");
             tft180_show_string(0,80,"  MODE4: path memory");
             tft180_show_string(0,90," >MODE5: remote control");
             tft180_show_string(0,100,"  PID setting");
-            tft180_show_string(0,110,"  Mechanical zero      ");
+            tft180_show_string(0,110,"  Mechanical zero        ");
             break;
         case 6:
-            tft180_show_string(0,10, "    MAIN MENU          ");
+            tft180_show_string(0,10, "    MAIN MENU           ");
             tft180_show_string(0,30, "----------------");
-            tft180_show_string(0,50,"  MODE1: balance");
+            tft180_show_string(0,50,"  MODE1: balance       ");
             tft180_show_string(0,60,"  MODE2: run circle");
             tft180_show_string(0,70,"  MODE3: run 8");
             tft180_show_string(0,80,"  MODE4: path memory");
             tft180_show_string(0,90,"  MODE5: remote control");
             tft180_show_string(0,100," >PID setting");
-            tft180_show_string(0,110,"  Mechanical zero      ");
+            tft180_show_string(0,110,"  Mechanical zero        ");
             break;
         case 7:  // ★★★ 新增机械中值设置项 ★★★
             tft180_show_string(0,10, "    MAIN MENU          ");
             tft180_show_string(0,30, "----------------");
-            tft180_show_string(0,50,"  MODE1: balance");
+            tft180_show_string(0,50,"  MODE1: balance"    );
             tft180_show_string(0,60,"  MODE2: run circle");
             tft180_show_string(0,70,"  MODE3: run 8");
             tft180_show_string(0,80,"  MODE4: path memory");
             tft180_show_string(0,90,"  MODE5: remote control");
             tft180_show_string(0,100,"  PID setting");
-            tft180_show_string(0,110," >Mechanical zero      ");
+            tft180_show_string(0,110," >Mechanical zero        ");
             break;
     }
 }
@@ -241,15 +241,15 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
             // 根据参数选择显示光标
             if(param_sel == 1) {
                 tft180_show_string(0, 50, " >KP:                ");
-                tft180_show_string(0, 70, "  KI:                ");
+                tft180_show_string(0, 70, "  KI:                   ");
                 tft180_show_string(0, 90, "  KD:                   ");
             } else if(param_sel == 2) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, " >KI:                ");
+                tft180_show_string(0, 70, " >KI:                   ");
                 tft180_show_string(0, 90, "  KD:                   ");
             } else if(param_sel == 3) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, "  KI:                ");
+                tft180_show_string(0, 70, "  KI:                   ");
                 tft180_show_string(0, 90, " >KD:                   ");
             }
             
@@ -266,15 +266,15 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
             // 根据参数选择显示光标
             if(param_sel == 1) {
                 tft180_show_string(0, 50, " >KP:                ");
-                tft180_show_string(0, 70, "  KI:                ");
+                tft180_show_string(0, 70, "  KI:                   ");
                 tft180_show_string(0, 90, "  KD:                   ");
             } else if(param_sel == 2) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, " >KI:                ");
+                tft180_show_string(0, 70, " >KI:                   ");
                 tft180_show_string(0, 90, "  KD:                   ");
             } else if(param_sel == 3) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, "  KI:                ");
+                tft180_show_string(0, 70, "  KI:                   ");
                 tft180_show_string(0, 90, " >KD:                   ");
             }
             
@@ -291,15 +291,15 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
             // 根据参数选择显示光标
             if(param_sel == 1) {
                 tft180_show_string(0, 50, " >KP:                ");
-                tft180_show_string(0, 70, "  KI:                ");
+                tft180_show_string(0, 70, "  KI:                   ");
                 tft180_show_string(0, 90, "  KD:                   ");
             } else if(param_sel == 2) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, " >KI:                ");
+                tft180_show_string(0, 70, " >KI:                   ");
                 tft180_show_string(0, 90, "  KD:                   ");
             } else if(param_sel == 3) {
                 tft180_show_string(0, 50, "  KP:                ");
-                tft180_show_string(0, 70, "  KI:                ");
+                tft180_show_string(0, 70, "  KI:                   ");
                 tft180_show_string(0, 90, " >KD:                   ");
             }
             
@@ -316,7 +316,7 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
     tft180_show_string(0, 100, "                       ");
     
     // 显示当前选择的环
-    tft180_show_string(0, 110, "Ring:");
+    tft180_show_string(0, 110, "Ring:  ");
     switch(ring_sel) {
         case 1: tft180_show_string(40, 110, "Angle"); break;
         case 2: tft180_show_string(40, 110, "Speed"); break;
@@ -329,25 +329,22 @@ void showplace7(uint8 che, float mech_zero) {
     tft180_show_string(0, 10, " MECHANICAL ZERO SET");
     tft180_show_string(0, 30, "-------------------");
     
-    // 显示编辑模式提示
-    if(che != 0) {
-        tft180_show_string(100, 10, "+");
-    } else {
-        tft180_show_string(100, 10, "-");
-    }
-    
     // 显示当前机械中值
     tft180_show_string(0, 50, "Current Value:");
     tft180_show_float(80, 50, mech_zero, 5, 3);  // 显示5位，3位小数
-    
+    tft180_show_string(0, 60, "                       ");
     // 显示提示信息
     tft180_show_string(0, 70, "Press KEY1/KEY2 to adjust");
     
     if(che == 0) {
+		tft180_show_string(0, 80, "                       ");
         tft180_show_string(0, 90, "Press KEY3 to edit");
+		tft180_show_string(0, 100, "                       ");
         tft180_show_string(0, 110, "Press KEY4 to save & exit");
     } else {
-        tft180_show_string(0, 90, "Editing...");
+		tft180_show_string(0, 80, "                       ");
+        tft180_show_string(0, 90, "Editing...              ");
+		tft180_show_string(0, 100, "                       ");
         tft180_show_string(0, 110, "Press KEY4 to save");
     }
 }
@@ -543,16 +540,14 @@ void menu(uint8* xp, uint8* yp,
             if(mech_zero_edit == 0) {  // 非编辑模式
                 // 显示机械中值设置界面
                 showplace7(mech_zero_edit, *mech_zero);  // ★★★ 正确使用mech_zero ★★★
-                
                 // KEY3: 进入编辑模式
                 if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
                     mech_zero_edit = 1;
                     key_clear_state(KEY_3);
                 }
-                
                 // KEY4: 保存并返回主菜单
                 if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
-                    flash_save_mechanical_zero();  // 保存到Flash
+                    flash_save_mech_zero();  // 保存到Flash
                     *yp = 0;  // 返回主菜单
                     key_clear_state(KEY_4);
                 }
@@ -566,24 +561,14 @@ void menu(uint8* xp, uint8* yp,
                     *mech_zero += 0.01f;  // 每次增加0.01
                     key_clear_state(KEY_1);
                 }
-                if(key_get_state(KEY_1) == KEY_LONG_PRESS) {
-                    *mech_zero += 0.1f;   // 长按增加0.1
-                    key_clear_state(KEY_1);
-                }
-                
                 // KEY2: 减少机械中值
                 if(key_get_state(KEY_2) == KEY_SHORT_PRESS) {
                     *mech_zero -= 0.01f;  // 每次减少0.01
                     key_clear_state(KEY_2);
                 }
-                if(key_get_state(KEY_2) == KEY_LONG_PRESS) {
-                    *mech_zero -= 0.1f;   // 长按减少0.1
-                    key_clear_state(KEY_2);
-                }
-                
                 // KEY4: 保存并退出编辑模式
                 if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
-                    flash_save_mechanical_zero();  // 保存到Flash
+                    flash_save_mech_zero();  // 保存到Flash
                     mech_zero_edit = 0;  // 退出编辑模式
                     key_clear_state(KEY_4);
                 }

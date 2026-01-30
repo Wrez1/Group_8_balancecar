@@ -88,6 +88,7 @@ int main(void)
 	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
 	tft180_clear();
 	flash_load();
+	flash_load_mech_zero();
 	while(1){
 		flash_save();
 		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
