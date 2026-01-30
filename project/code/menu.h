@@ -10,7 +10,8 @@ typedef PID_t PID_Params;
 void menu(uint8* xp, uint8* yp, 
           PID_t* angle_pid, 
           PID_t* speed_pid, 
-          PID_t* turn_pid);
+          PID_t* turn_pid,
+          float* mech_zero);
 
 #endif
 

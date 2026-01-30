@@ -14,7 +14,7 @@ float SpeedLeft,SpeedRight;
 float AveSpeed,DifSpeed;
 int16_t LeftPWM,RightPWM;
 int16_t AvePWM,DifPWM;
-
+extern float Mechanical_Zero_Pitch;
 
 // 菜单变量
 uint8_t menu_xp = 0;
@@ -90,7 +90,7 @@ int main(void)
 	flash_load();
 	while(1){
 		flash_save();
-		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID);
+		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
 		flash_save();
 		key_scanner();
 		system_delay_ms(10);

@@ -6,6 +6,10 @@
 #define FLASH_SECTION_INDEX       (127)
 #define FLASH_PAGE_INDEX          (3)
 
+// === 机械中值存储区 ===
+#define MECH_ZERO_SECTION_INDEX   (127)
+#define MECH_ZERO_PAGE_INDEX      (2)    // 使用第2页存储机械中值
+
 // === 惯导数据存储区 (新配置) ===
 // 使用 Sector 125 和 126 (共8KB空间)
 #define NAG_FLASH_SECTOR_START    (125) 
@@ -14,6 +18,7 @@
 extern PID_t AnglePID;
 extern PID_t SpeedPID;
 extern PID_t TurnPID;
+extern float Mechanical_Zero_Pitch;
 
 // ----------------------------------------------------
 // 原有的 PID 保存/读取函数 (保持不变)
@@ -71,6 +76,43 @@ void flash_load(void)
 
     flash_buffer_clear();
 }
+
+void flash_save_mechanical_zero(void)
+{
+    if(flash_check(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX)) 
+    {
+        flash_erase_page(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+    }
+    
+    flash_buffer_clear();
+    
+    // 将机械中值存入缓冲区的第一个位置
+    flash_union_buffer[0].float_type = Mechanical_Zero_Pitch;
+    
+    // 可以添加校验码
+    flash_union_buffer[1].uint32_type = 0x5A5A5A5A; // 校验标记
+    
+    flash_write_page_from_buffer(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+}
+
+// ★★★ 新增：从Flash读取机械中值 ★★★
+float flash_load_mechanical_zero(void)
+{
+    float default_zero = 0.0f;  // 默认值
+    
+    flash_read_page_to_buffer(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+    
+    // 检查校验标记
+    if(flash_union_buffer[1].uint32_type != 0x5A5A5A5A)
+    {
+        // 校验失败，返回默认值
+        return default_zero;
+    }
+    
+    // 返回保存的机械中值
+    return flash_union_buffer[0].float_type;
+}
+
 
 // ----------------------------------------------------
 // ★★★ 新增：惯导大数组 跨页存取逻辑 ★★★

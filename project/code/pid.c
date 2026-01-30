@@ -117,6 +117,9 @@ extern int16_t icm20602_gyro_y; // 或者是转换后的 float gyro_y (角速度
 float Real_Gyro_X;
 float Target_Gyro = 0.0f;
 
+// ★★★ 新增：机械中值外部声明 ★★★
+extern float Mechanical_Zero_Pitch;
+
 void Angle_Gyro_Cascade_Control(void)
 {
     float AvePWM;

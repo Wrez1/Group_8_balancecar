@@ -12,4 +12,8 @@ void flash_load(void);
 void flash_save_nag(void);
 uint8_t flash_load_nag(void);
 
+// ★★★ 新增：保存机械中值到Flash ★★★
+void flash_save_mechanical_zero(void);
+float flash_load_mechanical_zero(void);
+
 #endif
