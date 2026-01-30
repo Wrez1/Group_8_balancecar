@@ -535,6 +535,16 @@
               <FileType>5</FileType>
               <FilePath>..\code\sensor.h</FilePath>
             </File>
+            <File>
+              <FileName>navigation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\navigation.c</FilePath>
+            </File>
+            <File>
+              <FileName>navigation.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\code\navigation.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

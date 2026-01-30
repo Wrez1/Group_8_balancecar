@@ -5,76 +5,16 @@
 // 全局姿态对象
 Attitude_t Car_Attitude;
 
-// 定义两个卡尔曼滤波器实例 (Pitch 和 Roll)
-Kalman_t Kalman_Pitch;
-Kalman_t Kalman_Roll;
-
 // 常量定义
 #define RAD_TO_DEG  57.2957795f
 #define DEG_TO_RAD  0.01745329f
+#define GYRO_DEAD_ZONE  0.4f
 
-// ---------------------------------------------------------
-// 卡尔曼滤波核心算法
-// ---------------------------------------------------------
-void Kalman_Filter_Calc(Kalman_t *k, float acc_angle, float gyro_rate, float dt)
-{
-    // 1. 预测 (Predict)
-    // 更新角度：当前角度 = 上次角度 + (角速度 - 零漂) * dt
-    k->angle += (gyro_rate - k->gyro_bias) * dt;
 
-    // 更新协方差矩阵 P
-    // P = F * P * F^T + Q
-    k->P[0][0] += k->Q_angle - (k->P[0][1] + k->P[1][0]) * dt;
-    k->P[0][1] -= k->P[1][1] * dt;
-    k->P[1][0] -= k->P[1][1] * dt;
-    k->P[1][1] += k->Q_gyro;
-
-    // 2. 更新 (Update)
-    // 计算卡尔曼增益 K
-    // S = H * P * H^T + R
-    float S = k->P[0][0] + k->R_angle;
-    
-    // K = P * H^T * S^-1
-    k->K[0] = k->P[0][0] / S;
-    k->K[1] = k->P[1][0] / S;
-
-    // 计算观测误差 y = z - H * x
-    float y = acc_angle - k->angle;
-
-    // 更新最优估计 x = x + K * y
-    k->angle      += k->K[0] * y;
-    k->gyro_bias  += k->K[1] * y; // 自动估计并修正陀螺仪零漂
-    k->rate        = gyro_rate - k->gyro_bias; // 输出修正后的角速度
-
-    // 更新协方差矩阵 P = (I - K * H) * P
-    float P00_temp = k->P[0][0];
-    float P01_temp = k->P[0][1];
-
-    k->P[0][0] -= k->K[0] * P00_temp;
-    k->P[0][1] -= k->K[0] * P01_temp;
-    k->P[1][0] -= k->K[1] * P00_temp;
-    k->P[1][1] -= k->K[1] * P01_temp;
-}
-
-// ---------------------------------------------------------
-// 卡尔曼参数初始化
-// ---------------------------------------------------------
-void Kalman_Init(Kalman_t *k)
-{
-    k->angle = 0.0f;
-    k->gyro_bias = 0.0f;
-    k->rate = 0.0f;
-    
-    k->P[0][0] = 1.0f; k->P[0][1] = 0.0f;
-    k->P[1][0] = 0.0f; k->P[1][1] = 1.0f;
-    
-    // --- 参数调试指南 ---
-    // 如果角度滞后严重（反应慢）：增大 Q_angle，减小 R_angle
-    // 如果角度震荡严重（噪声大）：减小 Q_angle，增大 R_angle
-    k->Q_angle = 0.001f;  
-    k->Q_gyro  = 0.003f;
-    k->R_angle = 80.0f;    
-}
+float Gyro_X_Offset = -0.3449f;
+float Gyro_Y_Offset = 0.8135f;
+float Gyro_Z_Offset = -0.3587f;
+float Real_Gyro_Y = 0.0f;
 
 // ---------------------------------------------------------
 // IMU 初始化
@@ -87,11 +27,6 @@ void IMU_Init_Task(void)
         // 初始化失败，卡死或报错
         // zf_log(0, "ICM20602 Init Failed!"); 
     }
-	
-    
-    // 初始化卡尔曼参数
-    Kalman_Init(&Kalman_Pitch);
-    Kalman_Init(&Kalman_Roll);
 }
 
 // ---------------------------------------------------------
@@ -142,48 +77,60 @@ void IMU_Inertial_Nav_Calc(float ax, float ay, float az, float pitch_deg, float 
 // ---------------------------------------------------------
 void IMU_Get_Data_Task(float dt)
 {
-    // 1. 获取原始数据 (数据保存在 icm20602_acc_x 等全局变量中)
     icm20602_get_acc();
     icm20602_get_gyro();
 
-    // 2. 物理量转换 (利用库中的宏)
-    // 转换为 g
-    float accX = icm20602_acc_transition(icm20602_acc_x);
-    float accY = icm20602_acc_transition(icm20602_acc_y);
-    float accZ = icm20602_acc_transition(icm20602_acc_z);
+    // 1. 转换加速度 (单位 g)
+    float ax = icm20602_acc_transition(icm20602_acc_x);
+    float ay = icm20602_acc_transition(icm20602_acc_y);
+    float az = icm20602_acc_transition(icm20602_acc_z);
     
-    // 转换为 deg/s
-    float gyroX = icm20602_gyro_transition(icm20602_gyro_x);
-    float gyroY = icm20602_gyro_transition(icm20602_gyro_y);
-    float gyroZ = icm20602_gyro_transition(icm20602_gyro_z);
+	/*
+	if (fabsf(Speed_L) < 2.0f && fabsf(Speed_R) < 2.0f) 
+    {
+        // 2. 判断是否“手扶稳定”
+        // 当前陀螺仪读数波动不能太大，防止你手扶着车在晃，导致错误的校准
+        // 假设当前读数和之前的 Offset 相差在 2度/秒以内，说明是温漂，而不是运动
+        if (fabsf(raw_gz - Gyro_Z_Offset) < 2.0f) 
+        {
+            // 3. 核心：指数加权移动平均 (EMA)
+            // 让 Offset 极其缓慢地“爬”向当前的读数
+            // 0.001 是更新速度，越小越慢越稳。意味着每次修正 0.1% 的误差
+            Gyro_Z_Offset = Gyro_Z_Offset * 0.999f + raw_gz * 0.001f;
+        }
+        
+        // 4. 既然停着，直接锁死输出为 0 (强力死区)
+        gz_deg = 0.0f;
+    }
+    else 
+    {
+        // 车动的时候，使用动态更新后的 Offset
+        gz_deg = raw_gz - Gyro_Z_Offset;
+    }
+	*/
+	
+    // 2. 转换陀螺仪 (先减零漂，再转弧度！)
+    // 死区逻辑保留！这对 Mahony 同样有效
+    float gx_deg = icm20602_gyro_transition(icm20602_gyro_x) - Gyro_X_Offset;
+    float gy_deg = icm20602_gyro_transition(icm20602_gyro_y) - Gyro_Y_Offset;
+    float gz_deg = icm20602_gyro_transition(icm20602_gyro_z) - Gyro_Z_Offset;
+	
+	Real_Gyro_Y = gy_deg;
 
-    // 3. 计算加速度计角度 (atan2 返回弧度，需转为度)
-    // 假设芯片安装方向：X轴向前，Y轴向右，Z轴向下(或上)
-    // Pitch 绕 Y 轴旋转，Roll 绕 X 轴旋转
-    
-    // 计算 Accelerometer Pitch (俯仰)
-    // atan2(X, Z) 
-    float acc_pitch_angle = atan2f(accX, accZ) * RAD_TO_DEG;
-    
-    // 计算 Accelerometer Roll (横滚)
-    // atan2(Y, Z)
-    float acc_roll_angle  = atan2f(accY, accZ) * RAD_TO_DEG;
+    if (gz_deg > -GYRO_DEAD_ZONE && gz_deg < GYRO_DEAD_ZONE) gz_deg = 0.0f;	// 死区
+	if (gx_deg > -GYRO_DEAD_ZONE && gx_deg < GYRO_DEAD_ZONE) gz_deg = 0.0f;
+	if (gy_deg > -GYRO_DEAD_ZONE && gy_deg < GYRO_DEAD_ZONE) gz_deg = 0.0f;
 
-    // 4. 卡尔曼滤波融合
-    // 注意：陀螺仪轴向必须与加速度计计算出的角度变化方向一致
-    // 如果 acc_pitch 增加时，gyroY 是负的，则这里需要写 -gyroY
-    Kalman_Filter_Calc(&Kalman_Pitch, acc_pitch_angle, -gyroY, dt); // 绕Y轴转是Pitch
-    Kalman_Filter_Calc(&Kalman_Roll,  acc_roll_angle,  gyroX, dt); // 绕X轴转是Roll (注意符号需实测)
+    float gx = gx_deg * 0.0174533f; // 转弧度
+    float gy = gy_deg * 0.0174533f;
+    float gz = gz_deg * 0.0174533f;
 
-    // 5. 更新全局结果
-    Car_Attitude.Pitch = Kalman_Pitch.angle;
-    Car_Attitude.Roll  = Kalman_Roll.angle;
-    
-    // Yaw 轴通常只能积分，没有磁力计无法融合修正漂移
-    Car_Attitude.Yaw  += gyroZ * dt; 
+    // 3. ★调用 Mahony 算法★
+    // 注意：如果是平衡车，Pitch/Roll 颠倒的话，交换 ax/ay 或 gx/gy
+    MahonyAHRSupdateIMU(gy, gx, gz, -ay, -ax, az);
 
-    // 6. 惯性导航数据计算 (为速度环或位移估算提供数据)
-    IMU_Inertial_Nav_Calc(accX, accY, accZ, Car_Attitude.Pitch, Car_Attitude.Roll);
+    // 4. 计算角度
+    Mahony_Get_Angles();
 }
 
 // === 校准函数定义 ===
@@ -192,25 +139,42 @@ void IMU_Calibration(void)
 {
     float sum_x = 0, sum_y = 0, sum_z = 0;
     
-    // 提示信息 (如果有屏幕)
-    // tft180_show_string(0, 0, "Calibrating..."); 
+    // 1. 提示开始
+    tft180_clear();
+    tft180_show_string(0, 0, "Calibrating...");
+    tft180_show_string(0, 20, "Don't Move!");
     
-    // 循环读取 500 次 (车子必须绝对静止！)
-    for(int i = 0; i < 500; i++)
+    // 2. 循环读取 1000 次 (让它测久一点，更准)
+    for(int i = 0; i < 1000; i++)
     {
         icm20602_get_gyro();
-        // 注意：这里要用转换后的物理值 (deg/s) 累加
+        
+        // 累加物理值 (deg/s)
         sum_x += icm20602_gyro_transition(icm20602_gyro_x);
         sum_y += icm20602_gyro_transition(icm20602_gyro_y);
         sum_z += icm20602_gyro_transition(icm20602_gyro_z);
-        system_delay_ms(2); // 延时 2ms，总耗时约 1秒
+        
+        system_delay_ms(2); // 采样间隔
     }
     
-    // 求平均值，更新全局偏移量
-    Gyro_X_Offset = sum_x / 500.0f;
-    Gyro_Y_Offset = sum_y / 500.0f;
-    Gyro_Z_Offset = sum_z / 500.0f;
+    // 3. 算出平均值 (这就是零漂)
+    Gyro_X_Offset = sum_x / 1000.0f;
+    Gyro_Y_Offset = sum_y / 1000.0f;
+    Gyro_Z_Offset = sum_z / 1000.0f;
     
-    // 打印调试，看看校准了多少
-    // printf("Offset: %.3f, %.3f, %.3f\r\n", Gyro_X_Offset, Gyro_Y_Offset, Gyro_Z_Offset);
+    // 4. 显示在屏幕上 (保留4位小数)
+    tft180_clear();
+    tft180_show_string(0, 0, "Gyro Offset:");
+    
+    tft180_show_string(0, 30, "X:");
+    tft180_show_float(40, 30, Gyro_X_Offset, 2, 4);
+    
+    tft180_show_string(0, 50, "Y:");
+    tft180_show_float(40, 50, Gyro_Y_Offset, 2, 4);
+    
+    tft180_show_string(0, 70, "Z:");
+    tft180_show_float(40, 70, Gyro_Z_Offset, 2, 4);
+    
+    // 5. 死循环卡住 (防止程序跑飞，给你时间拍照/抄写)
+    while(1);
 }

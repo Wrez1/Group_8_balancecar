@@ -34,6 +34,23 @@
 ********************************************************************************************************************/
 
 #include "isr.h"
+#include "icm20602.h"
+#include "mahony.h"
+#include "pid.h"
+#include "navigation.h"
+#include "motor.h"
+
+
+// 惯导用的累积里程
+int64 Total_Encoder_L = 0;
+int64 Total_Encoder_R = 0;
+
+// 外部引用
+extern PID_t SpeedPID; // 速度环会更新 SpeedLeft/Right
+extern float SpeedLeft, SpeedRight;
+
+// 速度环分频计数器
+static uint8_t Speed_Loop_Count = 0;
 
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     TIM1 的定时器更新中断服务函数 启动 .s 文件定义 不允许修改函数名称
@@ -41,10 +58,49 @@
 //-------------------------------------------------------------------------------------------------------------------
 void TIM1_UP_IRQHandler (void)
 {
-    // 此处编写用户代码
-
-    // 此处编写用户代码
-    TIM1->SR &= ~TIM1->SR;                                                      // 清空中断状态
+	// 一句话搞定所有读取和解算，传入 dt = 0.005 (5ms)
+	IMU_Get_Data_Task(0.005f);
+    
+	
+	// === 2. 速度环与惯导 (20ms 分频) ===
+    Speed_Loop_Count++;
+    if(Speed_Loop_Count >= 4) // 5ms * 4 = 20ms
+    {
+        Speed_Loop_Count = 0;
+        
+        // 2.1 运行速度环 (更新 SpeedLeft/Right)
+        Speed_PIDControl(); 
+        
+        // 2.2 运行惯导逻辑
+        if(N.Nag_SystemRun_Index != 0)
+        {
+            // 累加本次的脉冲数 (SpeedLeft已经是这段时间的脉冲了)
+            Total_Encoder_L = (int64_t)SpeedLeft; 
+            Total_Encoder_R = (int64_t)SpeedRight;
+            
+            Nag_System(); // 执行惯导核心
+        }
+        else
+        {
+            Total_Encoder_L = 0;
+            Total_Encoder_R = 0;
+        }
+    }
+    
+    // === 3. 直立与转向控制 (5ms) ===
+    // 如果是惯导复现模式，把 N.Final_Out 注入给转向环
+    if(N.Nag_SystemRun_Index == 3) {
+         // 将角度误差转换为转向差速 (系数 2.0 可调)
+         TurnPID.Target = N.Final_Out * 2.0f; 
+    } else {
+         // 正常模式 (比如遥控或循迹)
+         // TurnPID.Target = ...; 
+    }
+	
+	Angle_Gyro_Cascade_Control();
+	
+	
+	TIM1->SR &= ~TIM1->SR;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -175,7 +231,7 @@ void UART2_IRQHandler (void)
     }
     if(UART2->ISR & 0x00000002)                                                 // 串口接收缓冲中断
     {
-        gps_uart_callback();
+        //gps_uart_callback();
         // 此处编写用户代码
         // 务必读取数据或者关闭中断 否则会一直触发串口接收中断
 
@@ -384,9 +440,6 @@ void EXTI3_IRQHandler (void)
 //-------------------------------------------------------------------------------------------------------------------
 void EXTI4_IRQHandler (void)
 {
-    // -----------------* DL1A INT 更新中断 预置中断处理函数 *-----------------
-    dl1a_int_handler();
-    // -----------------* DL1A INT 更新中断 预置中断处理函数 *-----------------
     // 此处编写用户代码 (A4/B4..G4) 引脚触发
 
     // 此处编写用户代码 (A4/B4..G4) 引脚触发
@@ -673,4 +726,3 @@ void DMA2_Channel5_IRQHandler (void)
         DMA2->IFCR |= (0x00000001 << (4 * 4));                                  // 清空该通道中断标志
     }
 }
-
