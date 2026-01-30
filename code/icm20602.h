@@ -18,6 +18,9 @@ typedef struct {
 
 extern Attitude_t Car_Attitude;
 extern float Gyro_X_Offset, Gyro_Y_Offset, Gyro_Z_Offset; 
+extern float Real_Gyro_X;
+extern float Real_Gyro_Y;
+extern float Real_Gyro_Z;
 // 函数声明
 void IMU_Init_Task(void);
 void IMU_Get_Data_Task(float dt); // dt: 循环周期，单位秒 (例如 0.005)
