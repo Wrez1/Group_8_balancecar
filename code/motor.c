@@ -39,11 +39,11 @@ void motor_control(int16_t speed_left, int16_t speed_right)
 
     // === 右电机控制 ===
     if(speed_right >= 0) {
-        gpio_set_level(MOTOR_R_DIR_PIN1, 1); // 正转方向
-		gpio_set_level(MOTOR_R_DIR_PIN2, 0); // 正转方向
+        gpio_set_level(MOTOR_R_DIR_PIN1, 0); // 正转方向
+		gpio_set_level(MOTOR_R_DIR_PIN2, 1); // 正转方向
     } else {
-        gpio_set_level(MOTOR_R_DIR_PIN1, 0); // 反转方向
-		gpio_set_level(MOTOR_R_DIR_PIN2, 1); // 反转方向
+        gpio_set_level(MOTOR_R_DIR_PIN1, 1); // 反转方向
+		gpio_set_level(MOTOR_R_DIR_PIN2, 0); // 反转方向
     }
     // 设置占空比
     pwm_set_duty(MOTOR_R_PWM_PIN, ABS(speed_right));

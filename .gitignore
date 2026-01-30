@@ -1,0 +1,28 @@
+# Keil MDK 垃圾文件屏蔽列表
+*.bak
+*.dep
+*.o
+*.d
+*.crf
+*.iex
+*.htm
+*.sct
+*.map
+*.lnp
+*.axf
+*.uvguix.*
+*.uvoptx
+*.scvd
+*.mcu
+JLinkLog.txt
+*.lst
+
+# 屏蔽编译输出文件夹 (最重要!)
+Objects/
+Listings/
+
+# Windows 垃圾
+Thumbs.db
+*.html
+*.
+

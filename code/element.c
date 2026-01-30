@@ -32,7 +32,7 @@ void Element_Process()
     //Element_Ring();     // 圆环
     Element_Noline();   // 丢线处理
     Element_Stop();     // 停车
-    Element_Ten();      // 十字识别
+    //Element_Ten();      // 十字识别
 }
 
 // 基础模式

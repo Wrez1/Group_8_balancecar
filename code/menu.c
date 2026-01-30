@@ -1,144 +1,471 @@
 #include "zf_common_headfile.h"
-// ================= å†…éƒ¨å®šä¹‰ =================
-// èœå•ç³»ç»Ÿçš„çŠ¶æ€
-typedef enum {
-    SYS_MENU_SELECT,    // ä¸»èœå•é€‰æ‹©ç•Œé¢
-    SYS_MODE_DISPLAY    // æ¨¡å¼è¯¦æƒ…/è¿è¡Œç•Œé¢
-} SystemState_e;
+#include "zf_device_tft180.h"
+#include "zf_device_key.h"
+#include <stdio.h> // ÓÃÓÚ sprintf
+#include "menu.h"
 
-// 5ç§å‘è½¦æ¨¡å¼
-typedef enum {
-    MODE_1_BALANCE = 0,
-    MODE_2_ROUTE_1,
-    MODE_3_ROUTE_2,
-    MODE_4_TEACH,
-    MODE_5_REMOTE,
-    MODE_COUNT          // è®¡æ•°ç”¨
-} RunMode_e;
-
-// å†…éƒ¨å…¨å±€å˜é‡
-static SystemState_e g_sys_state = SYS_MENU_SELECT;
-static RunMode_e     g_current_mode_index = MODE_1_BALANCE;
-static uint8_t       g_refresh_needed = 1; // 1 = éœ€è¦åˆ·æ–°å±å¹•
-
-// ================= å†…éƒ¨è¾…åŠ©å‡½æ•° (ç•Œé¢ç»˜åˆ¶) =================
-
-// ç»˜åˆ¶ä¸»èœå•ç•Œé¢
-static void _draw_main_menu(void) {
-    if(g_refresh_needed == 0) return;
-
-    tft180_clear(); //
-    tft180_show_string(10, 8, "SmartCar Menu");
-    tft180_show_string(0, 20, "----------------");
-
-    // æ ¹æ®å½“å‰ç´¢å¼•ç»˜åˆ¶èœå•é¡¹
-    tft180_show_string(0, 30,  (g_current_mode_index == MODE_1_BALANCE) ? "> 1.Balance"    : "  1.Balance");
-	tft180_show_string(0, 40,  (g_current_mode_index == MODE_2_ROUTE_1) ? "> 2.Route A-D"  : "  2.Route A-D");
-    tft180_show_string(0, 50,  (g_current_mode_index == MODE_3_ROUTE_2) ? "> 3.Race 4Laps" : "  3.Race 4Laps");
-    tft180_show_string(0, 60,  (g_current_mode_index == MODE_4_TEACH)   ? "> 4.Teach Mode" : "  4.Teach Mode");
-    tft180_show_string(0, 70, (g_current_mode_index == MODE_5_REMOTE)  ? "> 5.Remote"     : "  5.Remote");
-    
-    tft180_show_string(0, 80, "K1:Next K2:Ok");
-    
-    g_refresh_needed = 0; // æ¸…é™¤åˆ·æ–°æ ‡å¿—
+void showpalce0(uint8 x){
+	switch(x){
+		case 1:
+			tft180_show_string(0,10, "    MAIN MANU          ");
+			tft180_show_string(0,30, "----------------");
+		    tft180_show_string(0,50," >MODE1: balance");
+			tft180_show_string(0,60,"  MODE2: run circle");
+		    tft180_show_string(0,70,"  MODE3: run 8");
+			tft180_show_string(0,80,"  MODE4: path memory");
+		    tft180_show_string(0,90,"  MODE5: remote control");
+			tft180_show_string(0,100,"  PID setting");
+			break;
+		case 2:
+			tft180_show_string(0,10, "    MAIN MANU          ");
+			tft180_show_string(0,30, "----------------");
+		    tft180_show_string(0,50,"  MODE1: balance");
+			tft180_show_string(0,60," >MODE2: run circle");
+		    tft180_show_string(0,70,"  MODE3: run 8");
+			tft180_show_string(0,80,"  MODE4: path memory");
+		    tft180_show_string(0,90,"  MODE5: remote control");
+			tft180_show_string(0,100,"  PID setting");
+			break;
+		case 3:
+			tft180_show_string(0,10, "    MAIN MANU          ");
+			tft180_show_string(0,30, "----------------");
+		    tft180_show_string(0,50,"  MODE1: balance");
+			tft180_show_string(0,60,"  MODE2: run circle");
+		    tft180_show_string(0,70," >MODE3: run 8");
+			tft180_show_string(0,80,"  MODE4: path memory");
+		    tft180_show_string(0,90,"  MODE5: remote control");
+			tft180_show_string(0,100,"  PID setting");
+			break;
+		case 4:
+			tft180_show_string(0,10, "    MAIN MANU          ");
+			tft180_show_string(0,30, "----------------");
+		    tft180_show_string(0,50,"  MODE1: balance");
+			tft180_show_string(0,60,"  MODE2: run circle");
+		    tft180_show_string(0,70,"  MODE3: run 8");
+			tft180_show_string(0,80," >MODE4: path memory");
+		    tft180_show_string(0,90,"  MODE5: remote control");
+			tft180_show_string(0,100,"  PID setting");
+			break;
+		case 5:
+			tft180_show_string(0,10, "    MAIN MANU          ");
+			tft180_show_string(0,30, "----------------");
+		    tft180_show_string(0,50,"  MODE1: balance");
+			tft180_show_string(0,60,"  MODE2: run circle");
+		    tft180_show_string(0,70,"  MODE3: run 8");
+			tft180_show_string(0,80,"  MODE4: path memory");
+		    tft180_show_string(0,90," >MODE5: remote control");
+			tft180_show_string(0,100,"  PID setting");
+			break;
+		case 6:
+			tft180_show_string(0,10, "    MAIN MANU          ");
+			tft180_show_string(0,30, "----------------");
+		    tft180_show_string(0,50,"  MODE1: balance");
+			tft180_show_string(0,60,"  MODE2: run circle");
+			tft180_show_string(0,70,"  MODE3: run 8");
+			tft180_show_string(0,80,"  MODE4: path memory");
+		    tft180_show_string(0,90,"  MODE5: remote control ");
+			tft180_show_string(0,100," >PID setting");
+			break;
+	}
 }
 
-// ç»˜åˆ¶æ¨¡å¼è¯¦æƒ…ç•Œé¢
-static void _draw_mode_page(void) {
-    if(g_refresh_needed == 1) return;
-    
-    tft180_clear();
-    tft180_show_string(10, 10, "Mode Running...");
-    tft180_show_string(0, 25, "----------------");
-    
-    switch(g_current_mode_index) {
-        case MODE_1_BALANCE:
-            tft180_show_string(10, 50, "[Mode 1]");
-            tft180_show_string(10, 70, "Balance Loop");
-            break;
-        case MODE_2_ROUTE_1:
-            tft180_show_string(10, 50, "[Mode 2]");
-            tft180_show_string(10, 70, "Route Task");
-            break;
-        case MODE_3_ROUTE_2:
-            tft180_show_string(10, 50, "[Mode 3]");
-            tft180_show_string(10, 70, "Speed Race");
-            break;
-        case MODE_4_TEACH:
-            tft180_show_string(10, 50, "[Mode 4]");
-            tft180_show_string(10, 70, "Teach/Replay");
-            break;
-        case MODE_5_REMOTE:
-            tft180_show_string(10, 50, "[Mode 5]");
-            tft180_show_string(10, 70, "Remote Ctrl");
-        
-		default:
-            // æ•è· MODE_COUNT æˆ–å…¶ä»–éæ³•å€¼ï¼Œä»€ä¹ˆéƒ½ä¸åšï¼Œæˆ–è€…æ˜¾ç¤ºå‡ºé”™
-            break;
-    }
-    
-    tft180_show_string(0, 100, "Hold K4 to Exit");
-    
-    g_refresh_needed = 0;
+void showplace1(uint8 x){
+
+	switch(x){
+		case 1:
+			tft180_show_string(0, 10, "    MODE 1 balance     ");
+			tft180_show_string(0, 50, "    >READY             ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+
+		    break;
+		case 2:
+			tft180_show_string(0, 10, "    MODE 1 balance     ");
+			tft180_show_string(0, 50, "    GO!GO!GO!          ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+
+			break;
+	}
 }
 
-// ================= å¤–éƒ¨æ¥å£å®ç° =================
-
-// åˆå§‹åŒ–çŠ¶æ€å˜é‡
-void menu_init(void) {
-    g_sys_state = SYS_MENU_SELECT;
-    g_current_mode_index = MODE_1_BALANCE;
-    g_refresh_needed = 1;
-	
-	timer_init(TIM_6, TIMER_MS); 
-    timer_start(TIM_6);
-	
-	key_init(5);
+void showplace2(uint8 x){
+	switch(x){
+		case 1:
+			tft180_show_string(0, 10, "    MODE 2: run circle ");
+			tft180_show_string(0, 50, "    >READY             ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+		    break;
+		case 2:
+			tft180_show_string(0, 10, "    MODE 2: run circle ");
+			tft180_show_string(0, 50, "   GO!GO!GO!           ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+			break;
+	}
 }
 
-// èœå•ä¸»å¾ªç¯æ“ä½œå‡½æ•°
-void menu_operation(void) {
-    static uint16_t last_scan_time = 0;
-    uint16_t current_time = timer_get(TIM_6);
+void showplace3(uint8 x){
+	switch(x){
+		case 1:
+			tft180_show_string(0, 10, "    MODE 3: run 8      ");
+			tft180_show_string(0, 50, "   >READY              ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
 
-    // ã€æ ¸å¿ƒã€‘æ¯ 5ms æ‰å…è®¸è¿è¡Œä¸€æ¬¡æŒ‰é”®é€»è¾‘
-    if ((uint16_t)(current_time - last_scan_time) >= 5) 
-    {
-        last_scan_time = current_time;
+		    break;
+		case 2:
+			tft180_show_string(0, 10, "    MODE 3: run 8      ");
+			tft180_show_string(0, 50, "   GO!GO!GO!           ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+			break;
+	}
+}
 
-        // --- æŒ‰é”®å¤„ç†åŒºåŸŸ ---
-        key_scanner(); // åº“å‡½æ•°æ‰«æ
-        
-        // è·å–çŠ¶æ€
-        key_state_enum k1 = key_get_state(KEY_1);
-        key_state_enum k2 = key_get_state(KEY_2);
-        key_state_enum k4 = key_get_state(KEY_4);
-        
-        // çŠ¶æ€æœº
-        switch (g_sys_state) {
-            case SYS_MENU_SELECT:
-                _draw_main_menu();
-                // åªæœ‰æ¶ˆæŠ–åï¼Œè¿™é‡Œæ‰ä¸ä¼šè¿å‘
-                if (k1 == KEY_SHORT_PRESS) {
-                    g_current_mode_index++;
-                    if (g_current_mode_index >= MODE_COUNT) g_current_mode_index = 0;
-                    g_refresh_needed = 1; 
-                }
-                // ç¡®è®¤è¿›å…¥
-                if (k2 == KEY_SHORT_PRESS) {
-                    g_sys_state = SYS_MODE_DISPLAY;
-                    g_refresh_needed = 1; 
-                }
-                break;
-                
-            case SYS_MODE_DISPLAY:
-                _draw_mode_page();
-                if (k4 == KEY_LONG_PRESS) {
-                    g_sys_state = SYS_MENU_SELECT;
-                    g_refresh_needed = 1; 
-                }
-                break;
+void showplace4(uint8 x){
+	switch(x){
+		case 1:
+			tft180_show_string(0, 10, "    MODE 4: path memory");
+			tft180_show_string(0, 50, "  >READY               ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+		    break;
+		case 2:
+			tft180_show_string(0, 10, "    MODE 4: path memory");
+			tft180_show_string(0, 50, "   GO!GO!GO!           ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+			break;
+	}
+}
+
+void showplace5(uint8 x){
+	switch(x){
+		case 1:
+			tft180_show_string(0, 10, "    MODE 5: remote     ");
+			tft180_show_string(0, 50, "   >READY              ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+		    break;
+		case 2:
+			tft180_show_string(0, 10, "    MODE 5: remote     ");
+			tft180_show_string(0, 50, "   GO!GO!GO!           ");
+			tft180_show_string(0,60 ,"                        ");
+			tft180_show_string(0,70 ,"                        ");
+			tft180_show_string(0,80 ,"                        ");
+			tft180_show_string(0,90 ,"                        ");
+			tft180_show_string(0,100,"                        ");
+			break;
+	}
+}
+
+// ¡ï¡ï¡ï ĞÂÔö£ºXP=6 PID Ñ¡ÔñÒ³Ãæ (Ñ¡Ôñµ÷ÄÄ¸ö»·) ¡ï¡ï¡ï
+void showpalce6(uint8 yp)
+{
+    tft180_show_string(0, 10, "   SELECT PID   ");
+    tft180_show_string(0, 30, "----------------");
+    
+    // ÏÔÊ¾¹â±ê >
+    tft180_show_string(0, 40, (yp==1)?"> Angle (Out)":"  Angle (Out)");
+    tft180_show_string(0, 60, (yp==2)?"> Gyro  (In) ":"  Gyro  (In) ");
+    tft180_show_string(0, 80, (yp==3)?"> Speed PID  ":"  Speed PID  ");
+    tft180_show_string(0,100, (yp==4)?"> Turn  PID  ":"  Turn  PID  ");
+}
+
+// ¡ï¡ï¡ï ¸ÄÔì£ºXP=7 PID ÊıÖµĞŞ¸ÄÒ³Ãæ (ÊµÊ±ÏÔÊ¾À¶ÑÀ¸Ä¶¯) ¡ï¡ï¡ï
+// ²ÎÊı current_pid ÊÇµ±Ç°Ñ¡ÖĞµÄÄÇ¸ö»·
+void showpalce7(uint8 yp, PID_t *current_pid, char *title)
+{
+    char txt[30];
+    
+    tft180_show_string(0, 10, title); // ÏÔÊ¾±êÌâ£¬Èç "ANGLE PID"
+    tft180_show_string(0, 30, "----------------");
+    
+    // PÖµ
+    if(yp == 1) tft180_show_string(0, 50, ">>"); // ¹â±ê
+    else        tft180_show_string(0, 50, "  ");
+    // Ê¹ÓÃ %-6.2f ¸ñÊ½»¯£¬Ö±½Ó¶ÁÈ¡½á¹¹ÌåÀïµÄ×îĞÂÖµ
+    sprintf(txt, "KP: %-6.3f", current_pid->Kp); 
+    tft180_show_string(20, 50, txt);
+    
+    // IÖµ
+    if(yp == 2) tft180_show_string(0, 70, ">>");
+    else        tft180_show_string(0, 70, "  ");
+    sprintf(txt, "KI: %-6.3f", current_pid->Ki);
+    tft180_show_string(20, 70, txt);
+    
+    // DÖµ
+    if(yp == 3) tft180_show_string(0, 90, ">>");
+    else        tft180_show_string(0, 90, "  ");
+    sprintf(txt, "KD: %-6.3f", current_pid->Kd);
+    tft180_show_string(20, 90, txt);
+}
+
+uint8 che=0;
+// ¡ï¡ï¡ï Ö÷²Ëµ¥º¯ÊıÂß¼­ĞŞ¸Ä ¡ï¡ï¡ï
+// Ôö¼Ó¾²Ì¬±äÁ¿À´¼ÇÂ¼µ±Ç°Ñ¡ÁËÄÄ¸ö PID
+static PID_t *target_pid = NULL; 
+static char *target_title = "";
+
+void menu(uint8* xp, uint8* yp, PID_t *angle_pid, PID_t *gyro_pid, PID_t *speed_pid, PID_t *turn_pid)
+{
+    // === Ö÷²Ëµ¥Âß¼­ (ÍêÈ«±£ÁôÔ­Ñù) ===
+    if(*yp==0){
+        showpalce0(*xp);
+        if(key_get_state(KEY_1)==KEY_SHORT_PRESS){
+            *xp+=1;
+            key_clear_state(KEY_1);
         }
-        key_clear_all_state(); 
+        if(key_get_state(KEY_2)==KEY_SHORT_PRESS){
+            *xp-=1;
+            key_clear_state(KEY_2);
+        }
+        if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+            *yp+=1; // ½øÈë×Ó²Ëµ¥
+            key_clear_state(KEY_3);
+        }
+        if(*xp>6)*xp=1;
+        if(*xp<1)*xp=6;
+    }
+    // === ×Ó²Ëµ¥Âß¼­ ===
+    else if(*yp!=0){
+        // Ä£Ê½1 (±£ÁôÔ­Ñù)
+        if(*xp==1){
+            showplace1(*yp);
+            if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+                *yp+=1;
+                key_clear_state(KEY_3);
+            }
+            if(*yp>2)*yp=1;
+            if(key_get_state(KEY_4)==KEY_SHORT_PRESS){
+                *yp=0;
+                key_clear_state(KEY_4);
+            }           
+        }
+        // Ä£Ê½2 (±£ÁôÔ­Ñù)
+        else if(*xp==2){
+            showplace2(*yp);
+            if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+                *yp+=1;
+                key_clear_state(KEY_3);
+            }
+            if(*yp>2)*yp=1;
+            if(key_get_state(KEY_4)==KEY_SHORT_PRESS){
+                *yp=0;
+                key_clear_state(KEY_4);
+            }           
+        }
+        // Ä£Ê½3 (±£ÁôÔ­Ñù)
+        else if(*xp==3){
+            showplace3(*yp);
+            if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+                *yp+=1;
+                key_clear_state(KEY_3);
+            }
+            if(*yp>2)*yp=1;
+            if(key_get_state(KEY_4)==KEY_SHORT_PRESS){
+                *yp=0;
+                key_clear_state(KEY_4);
+            }   
+        }
+        // Ä£Ê½4 (±£ÁôÔ­Ñù)
+        else if(*xp==4){
+            showplace4(*yp);
+            if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+                *yp+=1;
+                key_clear_state(KEY_3);
+            }
+            if(*yp>2)*yp=1;
+            if(key_get_state(KEY_4)==KEY_SHORT_PRESS){
+                *yp=0;
+                key_clear_state(KEY_4);
+            }   
+        }
+        // Ä£Ê½5 (±£ÁôÔ­Ñù)
+        else if(*xp==5){
+            showplace5(*yp);
+            if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+                *yp+=1;
+                key_clear_state(KEY_3);
+            }
+            if(*yp>2)*yp=1;
+            if(key_get_state(KEY_4)==KEY_SHORT_PRESS){
+                *yp=0;
+                key_clear_state(KEY_4);
+            }
+        }
+        
+        // ¡ï¡ï¡ï XP=6: PID »·Ñ¡ÔñÒ³Ãæ (ĞÂÂß¼­) ¡ï¡ï¡ï
+        else if(*xp==6){
+            // µ÷ÓÃÑ¡ÔñÒ³ÏÔÊ¾º¯Êı (Angle/Gyro/Speed/Turn)
+            showpalce6(*yp); 
+            
+            // KEY_1/KEY_2 ÒÆ¶¯¹â±êÑ¡Ôñ»· (1-4)
+            if(key_get_state(KEY_1)==KEY_SHORT_PRESS){
+                *yp+=1;
+                key_clear_state(KEY_1);
+            }
+            if(key_get_state(KEY_2)==KEY_SHORT_PRESS){
+                *yp-=1;
+                key_clear_state(KEY_2);
+            }
+            if(*yp>4)*yp=1; // ÏŞÖÆÔÚ4¸öÑ¡ÏîÄÚ
+            if(*yp<1)*yp=4;
+            
+            // KEY_4 ·µ»ØÖ÷²Ëµ¥
+            if(key_get_state(KEY_4)==KEY_SHORT_PRESS){
+                *yp=0;
+                key_clear_state(KEY_4);
+            }
+            
+            // KEY_3 È·ÈÏÑ¡Ôñ£¬½øÈëĞŞ¸ÄÒ³(XP=7)
+            if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+                // ¸ù¾İ¹â±êÎ»ÖÃËø¶¨ÒªĞŞ¸ÄµÄ PID
+                if(*yp == 1) { target_pid = angle_pid; target_title = "ANGLE PID"; }
+                if(*yp == 2) { target_pid = gyro_pid;  target_title = "GYRO  PID"; }
+                if(*yp == 3) { target_pid = speed_pid; target_title = "SPEED PID"; }
+                if(*yp == 4) { target_pid = turn_pid;  target_title = "TURN  PID"; }
+                
+                *xp = 7; // Ìø×ªµ½Òş²ØµÄ XP=7 ĞŞ¸Ä×´Ì¬
+                *yp = 1; // Ä¬ÈÏÑ¡ÖĞ PÏî
+                che = 0; // Ä¬ÈÏ·Ç±à¼­×´Ì¬
+                key_clear_state(KEY_3);
+                tft180_clear(); // Ë¢ÆÁ
+            }
+        }
+        
+        // ¡ï¡ï¡ï XP=7: PID ÊıÖµĞŞ¸ÄÒ³Ãæ (¸´ÓÃÄãÔ­±¾µÄXP=6Âß¼­) ¡ï¡ï¡ï
+        else if(*xp==7 && target_pid != NULL){
+            
+            // che=0: ÒÆ¶¯¹â±êÑ¡Ôñ P/I/D
+            if(che==0){
+                if(key_get_state(KEY_1)==KEY_SHORT_PRESS){
+                    *yp+=1;
+                    key_clear_state(KEY_1);
+                }
+                if(key_get_state(KEY_2)==KEY_SHORT_PRESS){
+                    *yp-=1;
+                    key_clear_state(KEY_2);
+                }
+                if(*yp>3)*yp=1;
+                if(*yp<1)*yp=3;
+                
+                // KEY_4 ·µ»ØÉÏÒ»¼¶ (PIDÑ¡ÔñÒ³)
+                if(key_get_state(KEY_4)==KEY_SHORT_PRESS){
+                    *xp = 6; // »Øµ½Ñ¡ÔñÒ³
+                    *yp = 1;
+                    che = 0;
+                    key_clear_state(KEY_4);
+                    tft180_clear();
+                }
+                // KEY_3 ÇĞ»»±à¼­×´Ì¬
+                if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+                    che=!che;
+                    key_clear_state(KEY_3);
+                }
+            }
+            // che!=0: ĞŞ¸ÄÊıÖµ (Ö±½Ó²Ù×÷ target_pid Ö¸ÏòµÄÄÚ´æ)
+            else if(che!=0){
+                // È·¶¨²½½øÖµ (½ÇËÙ¶È»· GyroPID Í¨³£½ÏĞ¡£¬¿ÉÒÔÎ¢µ÷)
+                float step_s = 0.1f;
+                float step_l = 0.5f;
+                if(target_pid == gyro_pid) { step_s = 0.05f; step_l = 0.2f; }
+                
+                // ĞŞ¸Ä KP
+                if(*yp==1){
+                    if(key_get_state(KEY_1)==KEY_SHORT_PRESS){
+                        target_pid->Kp += step_s;
+                        key_clear_state(KEY_1);
+                    }
+                    if(key_get_state(KEY_2)==KEY_SHORT_PRESS){
+                        target_pid->Kp -= step_s;
+                        key_clear_state(KEY_2);
+                    }
+                    if(key_get_state(KEY_1)==KEY_LONG_PRESS){
+                        target_pid->Kp += step_l;
+                        key_clear_state(KEY_1);
+                    }
+                    if(key_get_state(KEY_2)==KEY_LONG_PRESS){
+                        target_pid->Kp -= step_l;
+                        key_clear_state(KEY_2);
+                    }
+                }
+                // ĞŞ¸Ä KI
+                else if(*yp==2){
+                    if(key_get_state(KEY_1)==KEY_SHORT_PRESS){
+                        target_pid->Ki += step_s;
+                        key_clear_state(KEY_1);
+                    }
+                    if(key_get_state(KEY_2)==KEY_SHORT_PRESS){
+                        target_pid->Ki -= step_s;
+                        key_clear_state(KEY_2);
+                    }
+                    if(key_get_state(KEY_1)==KEY_LONG_PRESS){
+                        target_pid->Ki += step_l;
+                        key_clear_state(KEY_1);
+                    }
+                    if(key_get_state(KEY_2)==KEY_LONG_PRESS){
+                        target_pid->Ki -= step_l;
+                        key_clear_state(KEY_2);
+                    }
+                }
+                // ĞŞ¸Ä KD
+                else if(*yp==3){
+                    if(key_get_state(KEY_1)==KEY_SHORT_PRESS){
+                        target_pid->Kd += step_s;
+                        key_clear_state(KEY_1);
+                    }
+                    if(key_get_state(KEY_2)==KEY_SHORT_PRESS){
+                        target_pid->Kd -= step_s;
+                        key_clear_state(KEY_2);
+                    }
+                    if(key_get_state(KEY_1)==KEY_LONG_PRESS){
+                        target_pid->Kd += step_l;
+                        key_clear_state(KEY_1);
+                    }
+                    if(key_get_state(KEY_2)==KEY_LONG_PRESS){
+                        target_pid->Kd -= step_l;
+                        key_clear_state(KEY_2);
+                    }
+                }
+                // KEY_3 ÍË³ö±à¼­
+                if(key_get_state(KEY_3)==KEY_SHORT_PRESS){
+                    che=!che;
+                    key_clear_state(KEY_3);
+                }
+            }
+            
+            // ÏÔÊ¾ĞŞ¸ÄÒ³Ãæ (ĞèÅäºÏÖ®Ç°¸øµÄ showpalce7 Ê¹ÓÃ)
+            showpalce7(*yp, target_pid, target_title);
+        }
     }
 }

@@ -1,12 +1,8 @@
-#ifndef _MENU_H_
-#define _MENU_H_
+#ifndef __MENU_H
+#define __MENU_H
+#include "zf_common_headfile.h"
+#include "pid.h"
+void menu(uint8* xp, uint8* yp, PID_t *angle_pid, PID_t *gyro_pid, PID_t *speed_pid, PID_t *turn_pid);
 
-#include "zf_common_headfile.h" // 包含常用头文件
-
-// 初始化菜单变量（可选，用于复位状态）
-void menu_init(void);
-
-// 核心菜单运行函数，需要在主循环中循环调用
-void menu_operation(void);
 
 #endif

@@ -20,6 +20,6 @@
 #define D8   gpio_get_level(E15)
 
 // º¯ÊýÉùÃ÷
-void sensor_Init(void);
+void sensor_init(void);
 
 #endif // __GRAYSCALESENSOR_H
