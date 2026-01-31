@@ -59,7 +59,7 @@ void TIM1_UP_IRQHandler (void)
          Turn_Target = N.Final_Out * 2.0f; 
     } else {
          // 正常模式 (比如遥控或循迹)
-         // TurnPID.Target = ...; 
+         TurnPID.Target = TurnPID.Target; 
     }
 	Turn_PIDControl();
 	Angle_Gyro_Cascade_Control();

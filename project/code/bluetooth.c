@@ -68,7 +68,7 @@ void Bluetooth_Control(float *SpeedTarget,float *TurnTarget)
 		    int8_t RV = atoi(strtok(NULL, ","));
 			
 			*SpeedTarget=LV/10;
-		    *TurnTarget=RH/10;
+		    *TurnTarget=-RH*1.2;
 		}
 		
 		Bluetooth_RxFlag = 0;//记得标志位归零

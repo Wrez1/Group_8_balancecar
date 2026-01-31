@@ -16,7 +16,7 @@ int16_t LeftPWM,RightPWM;
 int16_t AvePWM,DifPWM;
 
 extern float Mechanical_Zero_Pitch;
-
+extern float Turn_Target;
 // 菜单变量
 uint8_t menu_xp = 0;
 uint8_t menu_yp = 1;
@@ -104,7 +104,7 @@ int main(void)
 		}
 		else if (blue_mode_active) {
 			pit_ms_init(TIM1_PIT, 5);
-			Bluetooth_Control(&SpeedPID.Target,&TurnPID.Target);
+			Bluetooth_Control(&SpeedPID.Target,&Turn_Target);
 			system_delay_ms(10);
 		}
 //		flash_save();
