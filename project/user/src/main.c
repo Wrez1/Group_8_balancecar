@@ -70,44 +70,44 @@ PID_t SpeedPID = {
 };
 
 PID_t TurnPID = {
-	.Kp = 0.0f,
+	.Kp = 50.0f,
 	.Ki = 0.0f,
 	.Kd = 0.0f,
 	
-	.OutMax = 0,
-	.OutMin = 0,
+	.OutMax = 3000.0f,
+	.OutMin = -3000.0f,
 	
 	.ErrorIntMax = 0.0f,
 	.ErrorIntMin = 0.0f,
 };
 
 uint8 xp=1,yp=0;
-
-int main(void)
-{
-	debug_init();
-	clock_init(SYSTEM_CLOCK_120M);
-	key_init(10);
-	tft180_init();
-	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
-	tft180_clear();
-	encoder_init();
-    IMU_Init_Task();
-    motor_init();
-	All_PID_Init(); 
-//	flash_load();
-//	flash_load_mech_zero();
-	while(1){
-		if (balance_mode_active) {
-			pit_ms_init(TIM1_PIT, 5);
-		}
-//		flash_save();
-		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
-//		flash_save();
-		key_scanner();
-		system_delay_ms(10);
-	}
-}
+float a=0,b=0;
+//int main(void)
+//{
+//	debug_init();
+//	clock_init(SYSTEM_CLOCK_120M);
+//	key_init(10);
+//	tft180_init();
+//	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+//	tft180_clear();
+//	encoder_init();
+//    IMU_Init_Task();
+//    motor_init();
+//	All_PID_Init(); 
+////	flash_load();
+////	flash_load_mech_zero();
+//	while(1){
+//		if (balance_mode_active) {
+//			pit_ms_init(TIM1_PIT, 5);
+//		}
+////		flash_save();
+//		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
+////		flash_save();
+//		key_scanner();
+//		system_delay_ms(10);
+//	}
+//}
 
 //电机调试
 //int main() {
@@ -123,22 +123,23 @@ int main(void)
 //}
 
 //蓝牙测试
-//int main(void)
-//{
-//	debug_init();
-//	clock_init(SYSTEM_CLOCK_120M);
-//	key_init(10);
-//	tft180_init();
-//	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
-//	tft180_clear();
-//	BludeSerial_Init();
-// while(1)
-//    {	
-//		BlueSerial_Control(&a,&b);
-//		tft180_show_string(0, 10, "  TURN PID SETTING   ");
-//      tft180_show_float(40, 50, a, 3, 1);
-//      tft180_show_float(40, 70, b, 3, 1);
-//		system_delay_ms(10);
-//		
-//    }
-//}
+int main(void)
+{
+	debug_init();
+	clock_init(SYSTEM_CLOCK_120M);
+	key_init(10);
+	tft180_init();
+	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+	tft180_clear();
+	Bluetooth_Init();
+    while(1)
+       {	
+		   
+		Bluetooth_Control(&a,&b);
+		tft180_show_string(0, 10, "  TURN PID SETTING   ");
+        tft180_show_float(40, 50, a, 3, 1);
+        tft180_show_float(40, 70, b, 3, 1);
+		system_delay_ms(10);
+		
+       }
+}

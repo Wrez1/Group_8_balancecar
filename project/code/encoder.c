@@ -20,7 +20,7 @@ void encoder_init()
 
 int16_t Get_Count1(void)															
 {
-	return  encoder_get_count(ENCODER_1);	
+	return  -encoder_get_count(ENCODER_1);	
 }
 
 int16_t Get_Count2(void)															
