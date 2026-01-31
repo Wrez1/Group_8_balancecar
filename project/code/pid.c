@@ -82,7 +82,7 @@ extern float SpeedLeft,SpeedRight;
 extern float AveSpeed,DifSpeed;
 void Speed_PIDControl(void)
 {
-		SpeedLeft=(int16_t)Get_Count1();
+		SpeedLeft=(int16_t)Get_Count2();
 		SpeedRight=(int16_t)Get_Count1();
 		pit_encoder_handler();
 		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
@@ -101,7 +101,7 @@ void Speed_PIDControl(void)
 extern PID_t TurnPID;
 void Turn_PIDControl(void)
 {
-		SpeedLeft=(int16_t)Get_Count1();
+		SpeedLeft=(int16_t)Get_Count2();
 		SpeedRight=(int16_t)Get_Count1();
 		pit_encoder_handler();
 		AveSpeed=(SpeedLeft+SpeedRight)/2.f;

@@ -14,9 +14,7 @@ void Bluetooth_Init(void)
     
     // 启用接收中断
     uart_rx_interrupt(BLUETOOTH_UART, 1);
-    
-    // 注册中断服务函数
-    NVIC_EnableIRQ(BLUETOOTH_UART_IRQn);
+
 }
 
 // 发送单个字节
@@ -48,85 +46,83 @@ void Bluetooth_SendNumber(uint32_t Number, uint8_t Length)
 // 中断服务函数
 void BLUETOOTH_UART_IRQHandler(void)
 {
-    static uint8_t RxState = 0;
-    static uint8_t pRxPacket = 0;
-    uint8_t RxData;
-    if (uart_query_byte(BLUETOOTH_UART, &RxData))
+	static uint8_t RxState = 0;
+	static uint8_t pRxPacket = 0;
+	
+    if(UART6->ISR & 0x00000002)                                                 // 串口接收缓冲中断
     {
-        if (RxState == 0)
-        {
-            if (RxData == '[')
-            {
-                RxState = 1;
-                pRxPacket = 0;
-            }
-        }
-        else if (RxState == 1)
-        {
-            if (RxData == ']')
-            {
-                RxState = 0;
-                Bluetooth_RxPacket[pRxPacket] = '\0';
-                Bluetooth_RxFlag = 1;
-            }
-            else
-            {
-                Bluetooth_RxPacket[pRxPacket++] = RxData;
-            }
-        }
+        wireless_module_uart_handler();
+		uint8_t RxData = (uint8_t)UART6->RDR;	
+		if (RxState == 0)
+		{
+			if (RxData == '[' && Bluetooth_RxFlag == 0)
+			{
+				RxState = 1;
+				pRxPacket = 0;
+			}
+		}
+		else if (RxState == 1)
+		{
+			if (RxData == ']')
+			{
+				RxState = 0;
+				Bluetooth_RxPacket[pRxPacket] = '\0';
+				Bluetooth_RxFlag = 1;
+			}
+			else
+			{
+				Bluetooth_RxPacket[pRxPacket] = RxData;
+				pRxPacket ++;
+			}
+		}
+        UART6->ICR |= 0x00000002;                                               // 清除中断标志位
     }
 }
 
 // 数据处理函数
-void Bluetooth_ProcessData(void)
+void Bluetooth_ProcessData(float *Speed,float *Turn)
 {
     if (Bluetooth_RxFlag)
     {
         
         char *Tag = strtok(Bluetooth_RxPacket, ",");
-        if (strcmp(Tag, "key") == 0)
-        {
-            char *Name = strtok(NULL, ",");
-            char *Action = strtok(NULL, ",");
-            
-            if (strcmp(Name, "1") == 0 && strcmp(Action, "up") == 0)
-            {
-                Bluetooth_SendString("key,1,up\r\n");
-            }
-            else if (strcmp(Name, "2") == 0 && strcmp(Action, "down") == 0)
-            {
-                Bluetooth_SendString("key,2,down\r\n");
-            }
-        }
-        else if (strcmp(Tag, "slider") == 0)
-        {
-            char *Name = strtok(NULL, ",");
-            char *Value = strtok(NULL, ",");
-            
-            if (strcmp(Name, "1") == 0)
-            {
-                uint8_t IntValue = atoi(Value);
-                Bluetooth_SendString("slider,1,");
-                Bluetooth_SendNumber(IntValue, 3);
-                Bluetooth_SendString("\r\n");
-            }
-        }
-        else if (strcmp(Tag, "joystick") == 0)
+//        if (strcmp(Tag, "key") == 0)
+//        {
+//            char *Name = strtok(NULL, ",");
+//            char *Action = strtok(NULL, ",");
+//            
+//            if (strcmp(Name, "1") == 0 && strcmp(Action, "up") == 0)
+//            {
+//                Bluetooth_SendString("key,1,up\r\n");
+//            }
+//            else if (strcmp(Name, "2") == 0 && strcmp(Action, "down") == 0)
+//            {
+//                Bluetooth_SendString("key,2,down\r\n");
+//            }
+//        }
+//        else if (strcmp(Tag, "slider") == 0)
+//        {
+//            char *Name = strtok(NULL, ",");
+//            char *Value = strtok(NULL, ",");
+//            
+//            if (strcmp(Name, "1") == 0)
+//            {
+//                uint8_t IntValue = atoi(Value);
+//                Bluetooth_SendString("slider,1,");
+//                Bluetooth_SendNumber(IntValue, 3);
+//                Bluetooth_SendString("\r\n");
+//            }
+//        }
+//只需要蓝牙摇杆控值小车
+        if (strcmp(Tag, "joystick") == 0)
         {
             int8_t LH = atoi(strtok(NULL, ","));
             int8_t LV = atoi(strtok(NULL, ","));
             int8_t RH = atoi(strtok(NULL, ","));
             int8_t RV = atoi(strtok(NULL, ","));
             
-            Bluetooth_SendString("joystick,");
-            Bluetooth_SendNumber(LH, 3);
-            Bluetooth_SendString(",");
-            Bluetooth_SendNumber(LV, 3);
-            Bluetooth_SendString(",");
-            Bluetooth_SendNumber(RH, 3);
-            Bluetooth_SendString(",");
-            Bluetooth_SendNumber(RV, 3);
-            Bluetooth_SendString("\r\n");
+		    *Speed=LV/10;
+		    *Turn=RH/10;
         }
         
         Bluetooth_RxFlag = 0;

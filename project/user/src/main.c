@@ -109,6 +109,7 @@ int main(void)
 	}
 }
 
+//电机调试
 //int main() {
 //    clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
 //    debug_init();                                                               // 初始化默认 Debug UART
@@ -117,7 +118,27 @@ int main(void)
 //    motor_init();
 //    
 //    motor_control(2000, 4000);
-
 //    
 //    return 0;
+//}
+
+//蓝牙测试
+//int main(void)
+//{
+//	debug_init();
+//	clock_init(SYSTEM_CLOCK_120M);
+//	key_init(10);
+//	tft180_init();
+//	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+//	tft180_clear();
+//	BludeSerial_Init();
+// while(1)
+//    {	
+//		BlueSerial_Control(&a,&b);
+//		tft180_show_string(0, 10, "  TURN PID SETTING   ");
+//      tft180_show_float(40, 50, a, 3, 1);
+//      tft180_show_float(40, 70, b, 3, 1);
+//		system_delay_ms(10);
+//		
+//    }
 //}

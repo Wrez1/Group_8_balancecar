@@ -17,6 +17,6 @@ void Bluetooth_SendByte(uint8_t Byte);
 void Bluetooth_SendArray(uint8_t *Array, uint16_t Length);
 void Bluetooth_SendString(char *String);
 void Bluetooth_SendNumber(uint32_t Number, uint8_t Length);
-void Bluetooth_ProcessData(void);
+void Bluetooth_ProcessData(float *Speed,float *Turn);
 
 #endif
