@@ -55,7 +55,7 @@ extern PID_t TurnPID;
 extern float SpeedLeft,SpeedRight;
 extern float AveSpeed,DifSpeed;
 
-float Mechanical_Zero_Pitch = 1.80f;
+float Mechanical_Zero_Pitch = -0.3f;
 void Angle_PIDControl(void)
 {
 	if (Car_Attitude.Pitch > 70 || Car_Attitude.Pitch < -70)	//角度过大保护	
@@ -80,12 +80,16 @@ void Angle_PIDControl(void)
 extern PID_t SpeedPID;
 extern float SpeedLeft,SpeedRight;
 extern float AveSpeed,DifSpeed;
+// 定义一个静态变量来保存上一次的速度
+static float Last_AveSpeed = 0.0f;
 void Speed_PIDControl(void)
 {
 		SpeedLeft=(int16_t)Get_Count1();
 		SpeedRight=(int16_t)Get_Count2();
 		pit_encoder_handler();
-		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
+		float Raw_Speed=(SpeedLeft+SpeedRight)/2.f;
+	    AveSpeed = Raw_Speed * 0.66f + Last_AveSpeed * 0.34f;
+        Last_AveSpeed = AveSpeed; // 更新历史值
 		DifSpeed=SpeedLeft-SpeedRight;
 		
 		SpeedPID.Actual=AveSpeed;
@@ -132,7 +136,7 @@ void Angle_Gyro_Cascade_Control(void)
     // 1. 安全保护 (炸机保护)
     // ==========================================
     // 角度过大（倒地），强制关闭电机
-    if (Car_Attitude.Pitch > 45.0f || Car_Attitude.Pitch < -45.0f) 
+    if (Car_Attitude.Pitch > 55.0f || Car_Attitude.Pitch < -55.0f) 
     {
         motor_control(0, 0);
 		// 2. ★★★ 关键：清空所有 PID 的积分和历史误差 ★★★
@@ -193,7 +197,7 @@ void Angle_Gyro_Cascade_Control(void)
     // ==========================================
     // TurnPID.Out 在 isr.c 或 navigation.c 里计算
 	
-	float Safe_Angle = 8.0f;
+	float Safe_Angle = 14.0f;
     // 差速控制：左加右减（或反之）
     if (fabsf(Car_Attitude.Pitch - Mechanical_Zero_Pitch) < Safe_Angle)
     {

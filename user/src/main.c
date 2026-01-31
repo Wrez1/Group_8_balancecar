@@ -1,5 +1,5 @@
 #include "zf_common_headfile.h"
-#include "motor.h"  // 务必包含你自己写的头文件
+#include "motor.h"
 #include "encoder.h"
 #include "icm20602.h"
 #include "menu.h"
@@ -15,11 +15,15 @@ float AveSpeed,DifSpeed;
 int16_t LeftPWM,RightPWM;
 int16_t AvePWM,DifPWM;
 
-
+extern float Mechanical_Zero_Pitch;
+extern float Turn_Target;
 // 菜单变量
 uint8_t menu_xp = 0;
 uint8_t menu_yp = 1;
 
+// 模式状态标志
+uint8_t balance_mode_active = 0;  // 0:不运行平衡模式, 1:运行平衡模式
+uint8_t blue_mode_active = 0;
 // 蓝牙接收缓冲区
 char rx_buffer[64];
 uint8_t rx_cnt = 0;
@@ -28,11 +32,10 @@ PID_t GyroPID;
 
 void All_PID_Init(void)
 {
-    // ... 初始化 AnglePID ...
     
     // 初始化角速度环
     PID_Init(&GyroPID);
-    GyroPID.Kp = 46.0f;  // 经验值：内环 P 通常比外环大
+    GyroPID.Kp = 47.0f;  // 经验值：内环 P 通常比外环大
     GyroPID.Ki = 0.0f;  // 内环通常不需要积分，除非有静差
     GyroPID.Kd = 4.0f;  // 噪声大时不要加 D
     GyroPID.OutMax = 10000; // PWM 限幅
@@ -53,24 +56,22 @@ PID_t AnglePID = {
 	.ErrorIntMin = -0.0f,
 };
 
-
 PID_t SpeedPID = {
 	.Kp = 1.28f,
-	.Ki = 0.025f,
+	.Ki = 0.018f,
 	.Kd = 0.0f,
 	
-	.OutMax = 10.2f,
-	.OutMin = -10.2f,
+	.OutMax = 9.5f,
+	.OutMin = -11.2f,
 	
-	.ErrorIntMax = 1000.0f,
-	.ErrorIntMin = -1000.0f,
+	.ErrorIntMax = 500.0f,
+	.ErrorIntMin = -500.0f,
 };
 
-
 PID_t TurnPID = {
-	.Kp = 50.0f,
+	.Kp = 46.0f,
 	.Ki = 0.0f,
-	.Kd = 0.0f,
+	.Kd = 0.17f,
 	
 	.OutMax = 3000.0f,
 	.OutMin = -3000.0f,
@@ -79,68 +80,71 @@ PID_t TurnPID = {
 	.ErrorIntMin = 0.0f,
 };
 
+uint8 xp=1,yp=0;
+float a=0,b=0;
 int main(void)
 {
-    // 1. 硬件初始化
-    clock_init(SYSTEM_CLOCK_120M);
-    debug_init(); 
-    tft180_init();
-    encoder_init();
+	debug_init();
+	clock_init(SYSTEM_CLOCK_120M);
+	key_init(10);
+	tft180_init();
+	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+	tft180_clear();
+	encoder_init();
     IMU_Init_Task();
     motor_init();
-    //IMU_Calibration();
-    
-    // 2. 蓝牙初始化
-    //Bluetooth_Init(); 
-
-    // 3. PID 与 参数加载
-    All_PID_Init(); 
-    //flash_load();   
-
-    // 4. 开启控制
-    pit_ms_init(TIM1_PIT, 5);
-	
-	
-    while(1)
-    {
-        /// === 任务 1: 蓝牙处理 ===
-      /*  Bluetooth_Task();
-        
-        // === 任务 2: 菜单刷新 (4个PID) ===
-        menu(&menu_xp, &menu_yp, &AnglePID, &GyroPID, &SpeedPID, &TurnPID);
-        static uint8_t send_count = 0;
-        send_count++;
-        if(send_count >= 20) // 简易分频
-        {
-            send_count = 0;
-            
-            // 示例：发送当前 Pitch 角度
-            // 只要取消注释下面这行，手机蓝牙助手就能收到数据
-             Bluetooth_Send("Pitch:%.2f\r\n", Car_Attitude.Pitch);
-            
-            system_delay_ms(10); // 小延时释放 CPU 资源
-        }*/
-		//tft180_show_float(1,10,Car_Attitude.Pitch,2,4);
-		//tft180_show_float(1,20,Car_Attitude.Roll,2,4);
-		//tft180_show_float(1,30,Car_Attitude.Yaw,2,4);
-		//printf("%.3f,%.3f,%.3f\n", Car_Attitude.Pitch, Car_Attitude.Roll, Car_Attitude.Yaw);
-		
-		// 显示 Z轴原始数据 (验证传感器)
-    tft180_show_string(0, 0, "Gyro Z:");
-    tft180_show_float(60, 0, Real_Gyro_Z, 2, 2);
-
-    // 显示 PID 计算结果 (验证 PID 是否在计算)
-    tft180_show_string(0, 20, "Turn Out:");
-    tft180_show_int(60, 20, TurnPID.Out, 5); // 看看是不是 0 ?
-
-    // 显示 最终电机 PWM (验证有没有被清零)
-    tft180_show_string(0, 40, "PWM L:");
-    tft180_show_int(60, 40, LeftPWM, 5);
-
-    tft180_show_string(0, 60, "PWM R:");
-    tft180_show_int(60, 60, RightPWM, 5);
-		
-    }
-		
+	All_PID_Init(); 
+	Bluetooth_Init();
+//	flash_load();
+//	flash_load_mech_zero();
+	while(1){
+		if (balance_mode_active) {
+			pit_ms_init(TIM1_PIT, 5);
+		}
+		else if (blue_mode_active) {
+			pit_ms_init(TIM1_PIT, 5);
+			Bluetooth_Control(&SpeedPID.Target,&Turn_Target);
+			system_delay_ms(10);
+		}
+//		flash_save();
+		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
+//		flash_save();
+		key_scanner();
+		system_delay_ms(10);
+	}
 }
 
+//电机调试
+//int main() {
+//    clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
+//    debug_init();                                                               // 初始化默认 Debug UART
+//	
+//    encoder_init();
+//    motor_init();
+//    
+//    motor_control(2000, 4000);
+//    
+//    return 0;
+//}
+
+//蓝牙测试
+//int main(void)
+//{
+//	debug_init();
+//	clock_init(SYSTEM_CLOCK_120M);
+//	key_init(10);
+//	tft180_init();
+//	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+//	tft180_clear();
+//	Bluetooth_Init();
+//    while(1)
+//       {	
+//		   
+//		Bluetooth_Control(&a,&b);
+//		tft180_show_string(0, 10, "  TURN PID SETTING   ");
+//      tft180_show_float(40, 50, a, 3, 1);
+//      tft180_show_float(40, 70, b, 3, 1);
+//		system_delay_ms(10);
+//		
+//       }
+//}
