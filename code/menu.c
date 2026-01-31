@@ -4,6 +4,8 @@
 #include "menu.h"
 #include "flash.h"
 #include "motor.h" 
+#include "encoder.h" // ★★★ 必须添加，否则读不到 Location
+#include "pid.h"     // 确保能访问 Control_Mode 和 Target_Location
 //非编辑模式（PID设置界面）：
 // KEY_1: 切换到下一个环（角度环→速度环→转向环）
 // KEY_2: 切换到上一个环（转向环→速度环→角度环）
@@ -395,6 +397,19 @@ void menu(uint8* xp, uint8* yp,
                 // 如果进入GO状态，开启平衡模式
                 if (*yp == 2) {
                     balance_mode_active = 1;
+					
+					// 1. 设置为位置模式 (启用位置环->速度环->直立环串级)
+                    Control_Mode = 1;
+					
+					// 2. ★关键★：锁死当前位置！
+                    // 如果不写这句，Target_Location 默认为 0，
+                    // 而你当前 Location 可能是 5000，车子会疯了一样倒车。
+                    Target_Location = Location; 
+                    
+                    // 3. 重置位置环 PID (清除历史积分，防止跳变)
+                    PID_Init(&PositionPID); 
+                    PositionPID.Kp = -0.03f;      // 确保参数已加载
+                    PositionPID.OutMax = 12.0f;  // 确保限幅安全
                 }
             }
             if(*yp > 2) *yp = 1;
@@ -447,6 +462,7 @@ void menu(uint8* xp, uint8* yp,
                 key_clear_state(KEY_3);
                 if (*yp == 2) {
                     blue_mode_active = 1;
+					Control_Mode = 0;
                 }
             }
             if(*yp > 2) *yp = 1;

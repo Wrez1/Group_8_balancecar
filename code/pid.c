@@ -123,6 +123,48 @@ void Turn_PIDControl(void)
     DifPWM = TurnPID.Out;
 }
 
+// 1. 定义全局变量
+PID_t PositionPID;       // 位置环结构体
+float Target_Location = 0.0f; // 目标位置
+volatile uint8 Control_Mode = 0;// 0:蓝牙遥控(开环), 1:位置模式(闭环/惯导)
+extern float Location;
+
+// 2. 初始化函数 (在 All_PID_Init 中调用)
+// 参数建议：位置环不需要太快，Kp 给小一点，限幅限制最大巡航速度
+void Position_PID_Init(void)
+{
+    PID_Init(&PositionPID);
+    PositionPID.Kp = 0.05f;      // 试探值：误差1000脉冲 -> 目标速度 50
+    PositionPID.Ki = 0.0f;       // 位置环不需要积分
+    PositionPID.Kd = 0.0f;       // 位置环不需要微分 (速度环已经是微分了)
+    
+    PositionPID.OutMax = 20.0f;  // ★最大巡航速度限制 (防止飞车)
+    PositionPID.OutMin = -20.0f;
+}
+
+// 3. 位置环控制函数
+void Position_PIDControl(void)
+{
+    PositionPID.Target = Target_Location; // 你想去哪
+    PositionPID.Actual = Location;        // 你在哪
+    
+    PID_Update(&PositionPID);
+    
+    // ★★★ 核心连接：位置环的输出 = 速度环的目标 ★★★
+    // 只有在 Control_Mode == 1 时，这个值才会被写入 SpeedPID.Target
+    // 具体的写入操作，我们放在 isr.c 里做，比较安全
+	// 如果误差小于 50 个脉冲 (大概几毫米)，就认为到了，不发力
+    if (fabsf(PositionPID.Target - PositionPID.Actual) < 50.0f)
+    {
+        PositionPID.Out = 0.0f;
+    }
+}
+
+
+// 引用 encoder.c 里的全局位置变量
+extern float Location;
+
+
 extern Attitude_t Car_Attitude; // 你的姿态结构体
 extern PID_t GyroPID;           // 新增
 //extern int16_t icm20602_gyro_y; // 或者是转换后的 float gyro_y (角速度原始值)

@@ -4,7 +4,7 @@
 #include "pid.h"
 #include "navigation.h"
 #include "motor.h"
-
+#include "encoder.h"
 
 // 惯导用的累积里程
 int64 Total_Encoder_L = 0;
@@ -32,6 +32,26 @@ void TIM1_UP_IRQHandler (void)
     if(Speed_Loop_Count >= 4) // 5ms * 4 = 20ms
     {
         Speed_Loop_Count = 0;
+		
+		// ★★★ 在这里插入模式选择逻辑 ★★★
+        if (Control_Mode == 1) 
+        {
+            // ---【模式 1：位置闭环 / 惯导 / 定点平衡】---
+            encoder_Read();           // 1. 更新当前里程 Location
+            Position_PIDControl();    // 2. 运行位置 PID
+            
+            // 3. 强行接管速度环目标
+            // 位置环算出该跑多快，速度环就得听它的
+            SpeedPID.Target = PositionPID.Out; 
+        }
+        else 
+        {
+            // ---【模式 0：蓝牙遥控 / 循迹】---
+            // 1. 依然更新里程 (为了切模式时坐标不乱)
+            encoder_Read(); 
+            
+            // 2. 位置环不工作，SpeedPID.Target 保持 main 里蓝牙设定的值
+        }
         
         // 2.1 运行速度环 (更新 SpeedLeft/Right)
         Speed_PIDControl(); 

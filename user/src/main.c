@@ -40,6 +40,16 @@ void All_PID_Init(void)
     GyroPID.Kd = 4.0f;  // 噪声大时不要加 D
     GyroPID.OutMax = 10000; // PWM 限幅
     GyroPID.OutMin = -10000;
+	
+	// ★★★ 新增位置环参数初始化 ★★★
+    PID_Init(&PositionPID);
+    PositionPID.Kp = -0.03f;      
+    PositionPID.OutMax = 12.0f;  
+    PositionPID.OutMin = -12.0f;
+	// 设定初始目标为 0 (假设上电时就在原点)
+    Target_Location = 0.0f; 
+    
+    // 确保默认进入位置模式	
 }
 
 PID_t AnglePID = {
@@ -61,7 +71,7 @@ PID_t SpeedPID = {
 	.Ki = 0.018f,
 	.Kd = 0.0f,
 	
-	.OutMax = 9.5f,
+	.OutMax = 8.0f,
 	.OutMin = -11.2f,
 	
 	.ErrorIntMax = 500.0f,
@@ -100,10 +110,25 @@ int main(void)
 	while(1){
 		if (balance_mode_active) {
 			pit_ms_init(TIM1_PIT, 5);
+			Control_Mode = 1;
 		}
 		else if (blue_mode_active) {
 			pit_ms_init(TIM1_PIT, 5);
-			Bluetooth_Control(&SpeedPID.Target,&Turn_Target);
+			Control_Mode = 0;
+			// ★★★ 修改这里：分权控制 ★★★
+            if (Control_Mode == 0) 
+            {
+                // 【模式0：蓝牙遥控】
+                // 允许蓝牙修改速度目标
+                Bluetooth_Control(&SpeedPID.Target, &Turn_Target);
+            }
+            else 
+            {
+                // 【模式1：位置/惯导模式】
+                // 禁止蓝牙修改速度！蓝牙只能看，不能动。
+                // (可选) 你依然可以让蓝牙控制转向 Turn_Target
+                // Bluetooth_Control_TurnOnly(&Turn_Target); 
+            }
 			system_delay_ms(10);
 		}
 //		flash_save();
