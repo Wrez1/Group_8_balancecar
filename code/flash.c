@@ -6,6 +6,10 @@
 #define FLASH_SECTION_INDEX       (127)
 #define FLASH_PAGE_INDEX          (3)
 
+// === 机械中值存储区 ===
+#define MECH_ZERO_SECTION_INDEX   (127)
+#define MECH_ZERO_PAGE_INDEX      (2)    // 使用第2页存储机械中值
+
 // === 惯导数据存储区 (新配置) ===
 // 使用 Sector 125 和 126 (共8KB空间)
 #define NAG_FLASH_SECTOR_START    (125) 
@@ -14,6 +18,7 @@
 extern PID_t AnglePID;
 extern PID_t SpeedPID;
 extern PID_t TurnPID;
+extern float Mechanical_Zero_Pitch;
 
 // ----------------------------------------------------
 // 原有的 PID 保存/读取函数 (保持不变)
@@ -69,6 +74,65 @@ void flash_load(void)
         ((float*)&TurnPID)[i] = flash_union_buffer[2*sizeof(PID_t)/sizeof(float) + i].float_type;
     }
 
+    flash_buffer_clear();
+}
+
+// 保存机械中值
+void flash_save_mech_zero(void)
+{
+    if(flash_check(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX)) 
+    {
+        flash_erase_page(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+    }
+    
+    flash_buffer_clear();
+    
+    // 计算需要存储的float数量
+    // 我们存储一个float，但为了对齐和未来扩展，我们还是按float数组处理
+    int float_count = 1;  // 只存储机械中值一个float
+    
+    // 存储机械中值
+    flash_union_buffer[0].float_type = Mechanical_Zero_Pitch;
+    
+    // 添加校验标记（仿照PID存储方式，虽然PID没校验，但我们可以加一个）
+    // 使用0x5A5A5A5A作为校验标记
+    flash_union_buffer[1].uint32_type = 0x5A5A5A5A;
+    
+    // 可以存储一个版本号，方便以后扩展
+    flash_union_buffer[2].uint32_type = 0x00000001;  // 版本1
+    
+    flash_write_page_from_buffer(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+}
+
+// 加载机械中值
+void flash_load_mech_zero(void)
+{
+    // 默认值
+    float default_value = 0.0f;
+    
+    // 读取Flash页面
+    flash_read_page_to_buffer(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+    
+    // 检查校验标记
+    uint32_t check_mark = flash_union_buffer[1].uint32_type;
+    uint32_t version = flash_union_buffer[2].uint32_type;
+    
+    // 如果校验标记正确，版本为1，则加载数据
+    if(check_mark == 0x5A5A5A5A && version == 0x00000001)
+    {
+        // 加载机械中值
+        Mechanical_Zero_Pitch = flash_union_buffer[0].float_type;
+        // 打印调试信息（可选）
+        // printf("Loaded mech zero from flash: %f\n", Mechanical_Zero_Pitch);
+    }
+    else
+    {
+        // 校验失败，使用默认值
+        Mechanical_Zero_Pitch = default_value;
+        // 可选：保存默认值到Flash
+        // flash_save_mech_zero();
+    }
+    
     flash_buffer_clear();
 }
 
