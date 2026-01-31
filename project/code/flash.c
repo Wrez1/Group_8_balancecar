@@ -1,22 +1,27 @@
 #include "flash.h"
 #include "pid.h"
-#include "navigation.h" // â˜… å¿…é¡»å¼•å…¥ï¼Œä¸ºäº†è®¿é—® N å’Œ Nav_Record_Buffer
+#include "navigation.h" // ¡ï ±ØĞëÒıÈë£¬ÎªÁË·ÃÎÊ N ºÍ Nav_Record_Buffer
 
-// === PID å‚æ•°å­˜å‚¨åŒº (åŸé…ç½®) ===
+// === PID ²ÎÊı´æ´¢Çø (Ô­ÅäÖÃ) ===
 #define FLASH_SECTION_INDEX       (127)
 #define FLASH_PAGE_INDEX          (3)
 
-// === æƒ¯å¯¼æ•°æ®å­˜å‚¨åŒº (æ–°é…ç½®) ===
-// ä½¿ç”¨ Sector 125 å’Œ 126 (å…±8KBç©ºé—´)
+// === »úĞµÖĞÖµ´æ´¢Çø ===
+#define MECH_ZERO_SECTION_INDEX   (127)
+#define MECH_ZERO_PAGE_INDEX      (2)    // Ê¹ÓÃµÚ2Ò³´æ´¢»úĞµÖĞÖµ
+
+// === ¹ßµ¼Êı¾İ´æ´¢Çø (ĞÂÅäÖÃ) ===
+// Ê¹ÓÃ Sector 125 ºÍ 126 (¹²8KB¿Õ¼ä)
 #define NAG_FLASH_SECTOR_START    (125) 
-#define NAG_MAGIC_WORD            (0xA5A5A5A5) // ç”¨äºæ ‡è®°"è¿™é‡Œæœ‰æœ‰æ•ˆæ•°æ®"
+#define NAG_MAGIC_WORD            (0xA5A5A5A5) // ÓÃÓÚ±ê¼Ç"ÕâÀïÓĞÓĞĞ§Êı¾İ"
 
 extern PID_t AnglePID;
 extern PID_t SpeedPID;
 extern PID_t TurnPID;
+extern float Mechanical_Zero_Pitch;
 
 // ----------------------------------------------------
-// åŸæœ‰çš„ PID ä¿å­˜/è¯»å–å‡½æ•° (ä¿æŒä¸å˜)
+// Ô­ÓĞµÄ PID ±£´æ/¶ÁÈ¡º¯Êı (±£³Ö²»±ä)
 // ----------------------------------------------------
 void flash_save(void)
 {
@@ -26,19 +31,19 @@ void flash_save(void)
     }
     flash_buffer_clear(); 
 
-    // ä¿å­˜AnglePIDå‚æ•°
+    // ±£´æAnglePID²ÎÊı
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         flash_union_buffer[i].float_type = ((float*)&AnglePID)[i];
     }
     
-    // ä¿å­˜SpeedPIDå‚æ•°
+    // ±£´æSpeedPID²ÎÊı
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         flash_union_buffer[sizeof(PID_t)/sizeof(float) + i].float_type = ((float*)&SpeedPID)[i];
     }
     
-    // ä¿å­˜TurnPIDå‚æ•°
+    // ±£´æTurnPID²ÎÊı
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         flash_union_buffer[2*sizeof(PID_t)/sizeof(float) + i].float_type = ((float*)&TurnPID)[i];
@@ -51,19 +56,19 @@ void flash_load(void)
 {
     flash_read_page_to_buffer(FLASH_SECTION_INDEX, FLASH_PAGE_INDEX);
 
-    // åŠ è½½AnglePIDå‚æ•°
+    // ¼ÓÔØAnglePID²ÎÊı
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         ((float*)&AnglePID)[i] = flash_union_buffer[i].float_type;
     }
     
-    // åŠ è½½SpeedPIDå‚æ•°
+    // ¼ÓÔØSpeedPID²ÎÊı
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         ((float*)&SpeedPID)[i] = flash_union_buffer[sizeof(PID_t)/sizeof(float) + i].float_type;
     }
     
-    // åŠ è½½TurnPIDå‚æ•°
+    // ¼ÓÔØTurnPID²ÎÊı
     for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
     {
         ((float*)&TurnPID)[i] = flash_union_buffer[2*sizeof(PID_t)/sizeof(float) + i].float_type;
@@ -72,27 +77,86 @@ void flash_load(void)
     flash_buffer_clear();
 }
 
+// ±£´æ»úĞµÖĞÖµ
+void flash_save_mech_zero(void)
+{
+    if(flash_check(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX)) 
+    {
+        flash_erase_page(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+    }
+    
+    flash_buffer_clear();
+    
+    // ¼ÆËãĞèÒª´æ´¢µÄfloatÊıÁ¿
+    // ÎÒÃÇ´æ´¢Ò»¸öfloat£¬µ«ÎªÁË¶ÔÆëºÍÎ´À´À©Õ¹£¬ÎÒÃÇ»¹ÊÇ°´floatÊı×é´¦Àí
+    int float_count = 1;  // Ö»´æ´¢»úĞµÖĞÖµÒ»¸öfloat
+    
+    // ´æ´¢»úĞµÖĞÖµ
+    flash_union_buffer[0].float_type = Mechanical_Zero_Pitch;
+    
+    // Ìí¼ÓĞ£Ñé±ê¼Ç£¨·ÂÕÕPID´æ´¢·½Ê½£¬ËäÈ»PIDÃ»Ğ£Ñé£¬µ«ÎÒÃÇ¿ÉÒÔ¼ÓÒ»¸ö£©
+    // Ê¹ÓÃ0x5A5A5A5A×÷ÎªĞ£Ñé±ê¼Ç
+    flash_union_buffer[1].uint32_type = 0x5A5A5A5A;
+    
+    // ¿ÉÒÔ´æ´¢Ò»¸ö°æ±¾ºÅ£¬·½±ãÒÔºóÀ©Õ¹
+    flash_union_buffer[2].uint32_type = 0x00000001;  // °æ±¾1
+    
+    flash_write_page_from_buffer(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+}
+
+// ¼ÓÔØ»úĞµÖĞÖµ
+void flash_load_mech_zero(void)
+{
+    // Ä¬ÈÏÖµ
+    float default_value = 0.0f;
+    
+    // ¶ÁÈ¡FlashÒ³Ãæ
+    flash_read_page_to_buffer(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+    
+    // ¼ì²éĞ£Ñé±ê¼Ç
+    uint32_t check_mark = flash_union_buffer[1].uint32_type;
+    uint32_t version = flash_union_buffer[2].uint32_type;
+    
+    // Èç¹ûĞ£Ñé±ê¼ÇÕıÈ·£¬°æ±¾Îª1£¬Ôò¼ÓÔØÊı¾İ
+    if(check_mark == 0x5A5A5A5A && version == 0x00000001)
+    {
+        // ¼ÓÔØ»úĞµÖĞÖµ
+        Mechanical_Zero_Pitch = flash_union_buffer[0].float_type;
+        // ´òÓ¡µ÷ÊÔĞÅÏ¢£¨¿ÉÑ¡£©
+        // printf("Loaded mech zero from flash: %f\n", Mechanical_Zero_Pitch);
+    }
+    else
+    {
+        // Ğ£ÑéÊ§°Ü£¬Ê¹ÓÃÄ¬ÈÏÖµ
+        Mechanical_Zero_Pitch = default_value;
+        // ¿ÉÑ¡£º±£´æÄ¬ÈÏÖµµ½Flash
+        // flash_save_mech_zero();
+    }
+    
+    flash_buffer_clear();
+}
+
 // ----------------------------------------------------
-// â˜…â˜…â˜… æ–°å¢ï¼šæƒ¯å¯¼å¤§æ•°ç»„ è·¨é¡µå­˜å–é€»è¾‘ â˜…â˜…â˜…
+// ¡ï¡ï¡ï ĞÂÔö£º¹ßµ¼´óÊı×é ¿çÒ³´æÈ¡Âß¼­ ¡ï¡ï¡ï
 // ----------------------------------------------------
 
-// ä¿å­˜è·¯å¾„åˆ° Flash (è·¨é¡µå†™å…¥)
+// ±£´æÂ·¾¶µ½ Flash (¿çÒ³Ğ´Èë)
 void flash_save_nag(void)
 {
     uint32_t sector = NAG_FLASH_SECTOR_START;
     uint32_t page = 0;
     
-    // === 1. å‡†å¤‡ç¬¬ä¸€é¡µ (åŒ…å«æ–‡ä»¶å¤´) ===
+    // === 1. ×¼±¸µÚÒ»Ò³ (°üº¬ÎÄ¼şÍ·) ===
     flash_buffer_clear();
     
-    // å†™å…¥æ–‡ä»¶å¤´
-    flash_union_buffer[0].uint32_type = NAG_MAGIC_WORD; // æ ‡è®°:æœ‰æ•ˆæ•°æ®
-    flash_union_buffer[1].uint32_type = (uint32_t)N.Save_index; // æ ‡è®°:æœ‰å¤šå°‘ä¸ªç‚¹
+    // Ğ´ÈëÎÄ¼şÍ·
+    flash_union_buffer[0].uint32_type = NAG_MAGIC_WORD; // ±ê¼Ç:ÓĞĞ§Êı¾İ
+    flash_union_buffer[1].uint32_type = (uint32_t)N.Save_index; // ±ê¼Ç:ÓĞ¶àÉÙ¸öµã
     
-    // å†™å…¥ç¬¬ä¸€æ‰¹æ•°æ®
+    // Ğ´ÈëµÚÒ»ÅúÊı¾İ
     int count = 0;
-    int items_per_page = FLASH_DATA_BUFFER_SIZE; // 256ä¸ªuint32
-    // ç¬¬ä¸€é¡µå‰é¢å ç”¨äº†2ä¸ªä½ç½®ï¼Œæ‰€ä»¥è¿˜èƒ½å­˜ 254 ä¸ªæ•°æ®
+    int items_per_page = FLASH_DATA_BUFFER_SIZE; // 256¸öuint32
+    // µÚÒ»Ò³Ç°ÃæÕ¼ÓÃÁË2¸öÎ»ÖÃ£¬ËùÒÔ»¹ÄÜ´æ 254 ¸öÊı¾İ
     int first_page_capacity = items_per_page - 2;
     
     for(int i=0; i < first_page_capacity && i < N.Save_index; i++)
@@ -101,14 +165,14 @@ void flash_save_nag(void)
         count++;
     }
     
-    // å†™å…¥ç¬¬ä¸€é¡µ (æ³¨æ„: flash_write_page_from_buffer å†…éƒ¨ä¼šè‡ªåŠ¨æ“¦é™¤)
+    // Ğ´ÈëµÚÒ»Ò³ (×¢Òâ: flash_write_page_from_buffer ÄÚ²¿»á×Ô¶¯²Á³ı)
     flash_write_page_from_buffer(sector, page);
-    page++; // å‡†å¤‡å†™ä¸‹ä¸€é¡µ
+    page++; // ×¼±¸Ğ´ÏÂÒ»Ò³
     
-    // === 2. å¾ªç¯å†™å…¥å‰©ä½™æ•°æ® ===
+    // === 2. Ñ­»·Ğ´ÈëÊ£ÓàÊı¾İ ===
     while(count < N.Save_index)
     {
-        // å¤„ç†é¡µç /æ‰‡åŒºé€’å¢ (MM32F327 æ¯ä¸ªæ‰‡åŒº4é¡µ)
+        // ´¦ÀíÒ³Âë/ÉÈÇøµİÔö (MM32F327 Ã¿¸öÉÈÇø4Ò³)
         if(page > 3) {
             sector++;
             page = 0;
@@ -116,40 +180,40 @@ void flash_save_nag(void)
         
         flash_buffer_clear();
         
-        // å¡«æ»¡è¿™ä¸€é¡µç¼“å†²
+        // ÌîÂúÕâÒ»Ò³»º³å
         for(int i=0; i < items_per_page && count < N.Save_index; i++)
         {
             flash_union_buffer[i].int32_type = Nav_Record_Buffer[count];
             count++;
         }
         
-        // å†™å…¥ Flash
+        // Ğ´Èë Flash
         flash_write_page_from_buffer(sector, page);
         page++;
     }
 }
 
-// ä» Flash è¯»å–è·¯å¾„ (è·¨é¡µè¯»å–)
+// ´Ó Flash ¶ÁÈ¡Â·¾¶ (¿çÒ³¶ÁÈ¡)
 uint8_t flash_load_nag(void)
 {
     uint32_t sector = NAG_FLASH_SECTOR_START;
     uint32_t page = 0;
     
-    // === 1. è¯»å–ç¬¬ä¸€é¡µ (æ£€æŸ¥æ–‡ä»¶å¤´) ===
+    // === 1. ¶ÁÈ¡µÚÒ»Ò³ (¼ì²éÎÄ¼şÍ·) ===
     flash_read_page_to_buffer(sector, page);
     
-    // æ£€æŸ¥é­”æœ¯å­— (å¦‚æœä¸æ˜¯ A5A5A5A5ï¼Œè¯´æ˜è¿˜æ²¡å­˜è¿‡æ•°æ®)
+    // ¼ì²éÄ§Êõ×Ö (Èç¹û²»ÊÇ A5A5A5A5£¬ËµÃ÷»¹Ã»´æ¹ıÊı¾İ)
     if(flash_union_buffer[0].uint32_type != NAG_MAGIC_WORD) {
-        return 0; // å¤±è´¥
+        return 0; // Ê§°Ü
     }
     
-    // æ¢å¤ç‚¹æ•°
+    // »Ö¸´µãÊı
     N.Save_index = (uint16_t)flash_union_buffer[1].uint32_type;
     
-    // å®‰å…¨ä¿æŠ¤ï¼šé˜²æ­¢è¯»å‡ºæ¥çš„é•¿åº¦æ’‘çˆ† RAM
+    // °²È«±£»¤£º·ÀÖ¹¶Á³öÀ´µÄ³¤¶È³Å±¬ RAM
     if(N.Save_index > MaxSize) N.Save_index = MaxSize;
     
-    // è¯»å–ç¬¬ä¸€æ‰¹æ•°æ®
+    // ¶ÁÈ¡µÚÒ»ÅúÊı¾İ
     int count = 0;
     int items_per_page = FLASH_DATA_BUFFER_SIZE;
     int first_page_capacity = items_per_page - 2;
@@ -162,7 +226,7 @@ uint8_t flash_load_nag(void)
     
     page++;
     
-    // === 2. å¾ªç¯è¯»å–å‰©ä½™æ•°æ® ===
+    // === 2. Ñ­»·¶ÁÈ¡Ê£ÓàÊı¾İ ===
     while(count < N.Save_index)
     {
         if(page > 3) {
@@ -180,5 +244,5 @@ uint8_t flash_load_nag(void)
         page++;
     }
     
-    return 1; // æˆåŠŸ
+    return 1; // ³É¹¦
 }

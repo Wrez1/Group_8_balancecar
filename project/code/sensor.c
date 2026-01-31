@@ -2,7 +2,7 @@
 
 
 /**
- * @brief 初始化八路灰度/红外传感器
+ * @brief 初始化四路灰度/红外传感器
  * 配置为：GPIO输入模式 + 上拉 (Pull-Up)
  */
 void sensor_init(void) {
@@ -13,7 +13,8 @@ void sensor_init(void) {
     gpio_init(E9,  GPI, 0, GPI_PULL_UP);
     gpio_init(E10, GPI, 0, GPI_PULL_UP);
     gpio_init(E11, GPI, 0, GPI_PULL_UP);
-    gpio_init(E12, GPI, 0, GPI_PULL_UP);
-    gpio_init(E13, GPI, 0, GPI_PULL_UP);
+    gpio_init(E12,  GPI, 0, GPI_PULL_UP);
+    gpio_init(E13,  GPI, 0, GPI_PULL_UP);
     gpio_init(E14, GPI, 0, GPI_PULL_UP);
+    gpio_init(E15, GPI, 0, GPI_PULL_UP);
 }

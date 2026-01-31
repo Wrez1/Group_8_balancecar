@@ -546,24 +546,14 @@
               <FilePath>..\code\navigation.h</FilePath>
             </File>
             <File>
-              <FileName>line_follower.c</FileName>
+              <FileName>track.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\code\line_follower.c</FilePath>
+              <FilePath>..\code\track.c</FilePath>
             </File>
             <File>
-              <FileName>line_follower.h</FileName>
+              <FileName>track.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\code\line_follower.h</FilePath>
-            </File>
-            <File>
-              <FileName>systick.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\code\systick.c</FilePath>
-            </File>
-            <File>
-              <FileName>systick.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\code\systick.h</FilePath>
+              <FilePath>..\code\track.h</FilePath>
             </File>
           </Files>
         </Group>

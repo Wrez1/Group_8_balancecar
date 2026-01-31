@@ -5,12 +5,14 @@
 
 // 修改为使用PID_t类型
 typedef PID_t PID_Params;
+extern uint8_t CarMode;
 
 // 修改函数声明，传入三个环的PID参数
 void menu(uint8* xp, uint8* yp, 
           PID_t* angle_pid, 
           PID_t* speed_pid, 
-          PID_t* turn_pid);
+          PID_t* turn_pid,
+          float* mech_zero);
 
 #endif
 

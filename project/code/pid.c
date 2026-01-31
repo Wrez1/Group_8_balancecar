@@ -3,10 +3,7 @@
 #include "motor.h"
 #include "encoder.h"
 #include "icm20602.h"
-#include "line_follower.h"
-#include "systick.h"
-
-
+#include "math.h"
 void PID_Init(PID_t *p)
 {
 	p->Target = 0;
@@ -86,33 +83,40 @@ extern float AveSpeed,DifSpeed;
 void Speed_PIDControl(void)
 {
 		SpeedLeft=(int16_t)Get_Count1();
-		SpeedRight=(int16_t)Get_Count1();
+		SpeedRight=(int16_t)Get_Count2();
 		pit_encoder_handler();
 		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
 		DifSpeed=SpeedLeft-SpeedRight;
 		
 		SpeedPID.Actual=AveSpeed;
 		PID_Update(&SpeedPID);
-		AnglePID.Target=SpeedPID.Out;
+		//AnglePID.Target=SpeedPID.Out;
 	
-		TurnPID.Actual = DifSpeed;
-		PID_Update(&TurnPID);
-		DifPWM = TurnPID.Out;
+		//TurnPID.Actual = DifSpeed;
+		//PID_Update(&TurnPID);
+		//DifPWM = TurnPID.Out;
+	
+	
 }
 
 //转向环
 extern PID_t TurnPID;
+// 定义全局变量
+float Turn_Target = 0.0;
 void Turn_PIDControl(void)
 {
-		SpeedLeft=(int16_t)Get_Count1();
-		SpeedRight=(int16_t)Get_Count1();
-		pit_encoder_handler();
-		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
-		DifSpeed=SpeedLeft-SpeedRight;
-		
-		TurnPID.Actual=DifSpeed;
-		PID_Update(&TurnPID);
-		DifPWM=TurnPID.Out;
+    // 目标：来自蓝牙 (Turn_Target)
+    TurnPID.Target = Turn_Target;
+    
+    // 反馈：来自陀螺仪 Z 轴 (Real_Gyro_Z)
+    // 注意：Real_Gyro_Z 必须是“去零漂”后的值 (在 icm20602.c 里处理)
+    TurnPID.Actual = Real_Gyro_Z; 
+    
+    // 计算
+    PID_Update(&TurnPID);
+    
+    // 输出：DifPWM 留给 Cascade 函数去叠加
+    DifPWM = TurnPID.Out;
 }
 
 extern Attitude_t Car_Attitude; // 你的姿态结构体
@@ -120,7 +124,7 @@ extern PID_t GyroPID;           // 新增
 //extern int16_t icm20602_gyro_y; // 或者是转换后的 float gyro_y (角速度原始值)
 float Target_Gyro = 0.0f;
 
-void Angle_Gyro_Cascade_Control1(void)
+void Angle_Gyro_Cascade_Control(void)
 {
     float AvePWM;
     
@@ -131,6 +135,15 @@ void Angle_Gyro_Cascade_Control1(void)
     if (Car_Attitude.Pitch > 45.0f || Car_Attitude.Pitch < -45.0f) 
     {
         motor_control(0, 0);
+		// 2. ★★★ 关键：清空所有 PID 的积分和历史误差 ★★★
+        // 否则你把车扶正的瞬间，积分项会让车子猛冲一下
+        PID_Init(&AnglePID);
+        PID_Init(&GyroPID);
+        PID_Init(&SpeedPID);
+        PID_Init(&TurnPID); // 转向环也要清空！
+        
+        // 3. 目标全部归零
+        Turn_Target = 0;
         return;
     }
 
@@ -179,9 +192,31 @@ void Angle_Gyro_Cascade_Control1(void)
     // 5. 转向环叠加 & 电机输出
     // ==========================================
     // TurnPID.Out 在 isr.c 或 navigation.c 里计算
+	
+	float Safe_Angle = 8.0f;
     // 差速控制：左加右减（或反之）
-    LeftPWM  = (int16_t)(AvePWM - TurnPID.Out);
-    RightPWM = (int16_t)(AvePWM + TurnPID.Out);
+    if (fabsf(Car_Attitude.Pitch - Mechanical_Zero_Pitch) < Safe_Angle)
+    {
+        // 【情况 A：车子站稳了】
+        // 允许叠加转向环输出，开始干活！
+        LeftPWM  = (int16_t)(AvePWM - TurnPID.Out);
+        RightPWM = (int16_t)(AvePWM + TurnPID.Out);
+    }
+    else
+    {
+        // 【情况 B：车子还在挣扎（起步或快倒了）】
+        // 1. 强制切断转向力，全力维持平衡！
+        LeftPWM  = (int16_t)AvePWM;
+        RightPWM = (int16_t)AvePWM;
+        
+        // 2. ★关键★：清空转向环的积分和输出
+        // 为什么要清空？
+        // 如果不清空，PID 会在后台一直憋大招（积分累积）。
+        // 等车子刚一站稳（进入 ±8 度），这股憋着的力量会突然释放，
+        // 导致车子猛地甩一下尾，甚至直接甩倒。
+        TurnPID.ErrorInt = 0;
+        TurnPID.Out = 0;
+    }
     
     // ==========================================
     // 6. 限幅与执行
@@ -197,116 +232,5 @@ void Angle_Gyro_Cascade_Control1(void)
     // 显示 最终PWM，看看是不是 0？
     //tft180_show_int(0, 60, AvePWM, 4);
 	
-    motor_control(LeftPWM, RightPWM);
-}
-
-void Angle_Gyro_Cascade_Control2(void)
-{
-    float AvePWM;
-    static uint32_t last_imu_time = 0;
-    uint32_t current_time = systick_get_ms();
-    
-    // ==========================================
-    // 1. 安全保护
-    // ==========================================
-    if (Car_Attitude.Pitch > 45.0f || Car_Attitude.Pitch < -45.0f) 
-    {
-        motor_control(0, 0);
-        return;
-    }
-
-    // ==========================================
-    // 2. 更新IMU数据（姿态解算）
-    // ==========================================
-    float dt = 0;
-    if (last_imu_time > 0) {
-        dt = (current_time - last_imu_time) / 1000.0f;
-    } else {
-        dt = 0.01f;
-    }
-    
-    if (dt > 0.005f) {
-        IMU_Get_Data_Task(dt);  // 更新姿态
-        last_imu_time = current_time;
-    }
-
-    // ==========================================
-    // 3. 更新编码器数据
-    // ==========================================
-    SpeedLeft = (int16_t)Get_Count1();
-    SpeedRight = (int16_t)Get_Count1();
-    pit_encoder_handler();
-    AveSpeed = (SpeedLeft + SpeedRight) / 2.0f;
-    DifSpeed = SpeedLeft - SpeedRight;
-
-    // ==========================================
-    // 4. 寻迹控制（关键新增部分）
-    // ==========================================
-    // 更新传感器数据并设置TurnPID.Target
-    line_follower_update();
-    
-    // 根据是否在圆弧上调整速度目标
-    static float base_speed_target = 3.0f;  // 基础速度目标
-    
-    if (line_follower_is_on_arc()) {
-        // 在圆弧上：减速
-        SpeedPID.Target = base_speed_target * 0.7f;  // 圆弧速度为70%
-        
-        // 圆弧上需要更强的转向响应
-        // TurnPID.Target已经在line_follower_update中设置
-    } else {
-        // 在直线上：全速
-        SpeedPID.Target = base_speed_target;
-    }
-
-    // ==========================================
-    // 5. 速度环更新
-    // ==========================================
-    SpeedPID.Actual = AveSpeed;
-    PID_Update(&SpeedPID);
-    
-    // 速度环输出叠加到角度目标
-    float Target_Angle = Mechanical_Zero_Pitch + SpeedPID.Out;
-
-    // ==========================================
-    // 6. 角度环（外环）
-    // ==========================================
-    AnglePID.Target = Target_Angle;
-    AnglePID.Actual = Car_Attitude.Pitch;
-    PID_Update(&AnglePID);
-    
-    float Target_Gyro = -AnglePID.Out; 
-
-    // ==========================================
-    // 7. 角速度环（内环）
-    // ==========================================
-    GyroPID.Target = Target_Gyro;
-    GyroPID.Actual = Real_Gyro_X;
-    PID_Update(&GyroPID);
-    
-    AvePWM = GyroPID.Out;
-
-    // ==========================================
-    // 8. 转向环更新（使用寻迹模块设置的Target）
-    // ==========================================
-    // 注意：TurnPID.Target已由line_follower_update设置
-    // 这里只需要更新Actual和计算输出
-    TurnPID.Actual = DifSpeed;
-    PID_Update(&TurnPID);
-    
-    DifPWM = TurnPID.Out;
-
-    // ==========================================
-    // 9. 转向叠加 & 电机输出
-    // ==========================================
-    LeftPWM  = (int16_t)(AvePWM - DifPWM);
-    RightPWM = (int16_t)(AvePWM + DifPWM);
-    
-    // ==========================================
-    // 10. 限幅与执行
-    // ==========================================
-    if (LeftPWM  > 9500) LeftPWM  = 9500;  else if (LeftPWM  < -9500) LeftPWM  = -9500;
-    if (RightPWM > 9500) RightPWM = 9500;  else if (RightPWM < -9500) RightPWM = -9500;
-    
-    motor_control(LeftPWM, RightPWM);
+    motor_control(-LeftPWM, RightPWM);
 }
