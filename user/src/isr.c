@@ -91,12 +91,12 @@ void TIM1_UP_IRQHandler (void)
     // 如果是惯导复现模式，把 N.Final_Out 注入给转向环
     if(N.Nag_SystemRun_Index == 3) {
          // 将角度误差转换为转向差速 (系数 2.0 可调)
-         TurnPID.Target = N.Final_Out * 2.0f; 
+         Turn_Target = N.Final_Out * 2.0f; 
     } else {
          // 正常模式 (比如遥控或循迹)
          // TurnPID.Target = ...; 
     }
-	
+	Turn_PIDControl();
 	Angle_Gyro_Cascade_Control();
 	
 	

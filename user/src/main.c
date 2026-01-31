@@ -53,6 +53,7 @@ PID_t AnglePID = {
 	.ErrorIntMin = -0.0f,
 };
 
+
 PID_t SpeedPID = {
 	.Kp = 1.28f,
 	.Ki = 0.025f,
@@ -65,13 +66,14 @@ PID_t SpeedPID = {
 	.ErrorIntMin = -1000.0f,
 };
 
+
 PID_t TurnPID = {
-	.Kp = 0.0f,
+	.Kp = 50.0f,
 	.Ki = 0.0f,
 	.Kd = 0.0f,
 	
-	.OutMax = 0.0f,
-	.OutMin = 0.0f,
+	.OutMax = 3000.0f,
+	.OutMin = -3000.0f,
 	
 	.ErrorIntMax = 0.0f,
 	.ErrorIntMin = 0.0f,
@@ -123,9 +125,20 @@ int main(void)
 		//tft180_show_float(1,30,Car_Attitude.Yaw,2,4);
 		//printf("%.3f,%.3f,%.3f\n", Car_Attitude.Pitch, Car_Attitude.Roll, Car_Attitude.Yaw);
 		
-		tft180_show_int(1,70,Get_Count1(),4);
-		tft180_show_int(1,80,Get_Count1(),4);
-		
+		// 显示 Z轴原始数据 (验证传感器)
+    tft180_show_string(0, 0, "Gyro Z:");
+    tft180_show_float(60, 0, Real_Gyro_Z, 2, 2);
+
+    // 显示 PID 计算结果 (验证 PID 是否在计算)
+    tft180_show_string(0, 20, "Turn Out:");
+    tft180_show_int(60, 20, TurnPID.Out, 5); // 看看是不是 0 ?
+
+    // 显示 最终电机 PWM (验证有没有被清零)
+    tft180_show_string(0, 40, "PWM L:");
+    tft180_show_int(60, 40, LeftPWM, 5);
+
+    tft180_show_string(0, 60, "PWM R:");
+    tft180_show_int(60, 60, RightPWM, 5);
 		
     }
 		

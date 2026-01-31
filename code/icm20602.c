@@ -117,11 +117,13 @@ void IMU_Get_Data_Task(float dt)
     float gy_deg = icm20602_gyro_transition(icm20602_gyro_y) - Gyro_Y_Offset;
     float gz_deg = icm20602_gyro_transition(icm20602_gyro_z) - Gyro_Z_Offset;
 	
+
+    if (gz_deg > -GYRO_DEAD_ZONE && gz_deg < GYRO_DEAD_ZONE) gz_deg = 0.0f;	// 死区
+	
 	Real_Gyro_X = gx_deg;
     Real_Gyro_Y = gy_deg;
     Real_Gyro_Z = gz_deg;
-
-    if (gz_deg > -GYRO_DEAD_ZONE && gz_deg < GYRO_DEAD_ZONE) gz_deg = 0.0f;	// 死区
+	
     float gx = gx_deg * 0.0174533f; // 转弧度
     float gy = gy_deg * 0.0174533f;
     float gz = gz_deg * 0.0174533f;

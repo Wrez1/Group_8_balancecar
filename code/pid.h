@@ -40,6 +40,10 @@ void Speed_PIDControl(void);
 void Turn_PIDControl(void);
 extern float Real_Gyro_X;  // 真实角速度
 extern float Target_Gyro;  // 目标角速度
+
+ //新增：声明 Z 轴角速度 和 转向目标变量
+extern float Turn_Target;  // 转向目标 (由遥控器或循迹算法赋值)
+
 extern PID_t GyroPID;      // 角速度环 PID 对象
 void Angle_Gyro_Cascade_Control(void);
 #endif
