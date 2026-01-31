@@ -23,7 +23,7 @@ uint8_t menu_yp = 1;
 
 // 模式状态标志
 uint8_t balance_mode_active = 0;  // 0:不运行平衡模式, 1:运行平衡模式
-
+uint8_t blue_mode_active = 0;
 // 蓝牙接收缓冲区
 char rx_buffer[64];
 uint8_t rx_cnt = 0;
@@ -83,31 +83,37 @@ PID_t TurnPID = {
 
 uint8 xp=1,yp=0;
 float a=0,b=0;
-//int main(void)
-//{
-//	debug_init();
-//	clock_init(SYSTEM_CLOCK_120M);
-//	key_init(10);
-//	tft180_init();
-//	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
-//	tft180_clear();
-//	encoder_init();
-//    IMU_Init_Task();
-//    motor_init();
-//	All_PID_Init(); 
-////	flash_load();
-////	flash_load_mech_zero();
-//	while(1){
-//		if (balance_mode_active) {
-//			pit_ms_init(TIM1_PIT, 5);
-//		}
-////		flash_save();
-//		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
-////		flash_save();
-//		key_scanner();
-//		system_delay_ms(10);
-//	}
-//}
+int main(void)
+{
+	debug_init();
+	clock_init(SYSTEM_CLOCK_120M);
+	key_init(10);
+	tft180_init();
+	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+	tft180_clear();
+	encoder_init();
+    IMU_Init_Task();
+    motor_init();
+	All_PID_Init(); 
+	Bluetooth_Init();
+//	flash_load();
+//	flash_load_mech_zero();
+	while(1){
+		if (balance_mode_active) {
+			pit_ms_init(TIM1_PIT, 5);
+		}
+		else if (blue_mode_active) {
+			pit_ms_init(TIM1_PIT, 5);
+			Bluetooth_Control(&SpeedPID.Target,&TurnPID.Target);
+			system_delay_ms(10);
+		}
+//		flash_save();
+		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
+//		flash_save();
+		key_scanner();
+		system_delay_ms(10);
+	}
+}
 
 //电机调试
 //int main() {
@@ -123,23 +129,23 @@ float a=0,b=0;
 //}
 
 //蓝牙测试
-int main(void)
-{
-	debug_init();
-	clock_init(SYSTEM_CLOCK_120M);
-	key_init(10);
-	tft180_init();
-	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
-	tft180_clear();
-	Bluetooth_Init();
-    while(1)
-       {	
-		   
-		Bluetooth_Control(&a,&b);
-		tft180_show_string(0, 10, "  TURN PID SETTING   ");
-        tft180_show_float(40, 50, a, 3, 1);
-        tft180_show_float(40, 70, b, 3, 1);
-		system_delay_ms(10);
-		
-       }
-}
+//int main(void)
+//{
+//	debug_init();
+//	clock_init(SYSTEM_CLOCK_120M);
+//	key_init(10);
+//	tft180_init();
+//	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+//	tft180_clear();
+//	Bluetooth_Init();
+//    while(1)
+//       {	
+//		   
+//		Bluetooth_Control(&a,&b);
+//		tft180_show_string(0, 10, "  TURN PID SETTING   ");
+//      tft180_show_float(40, 50, a, 3, 1);
+//      tft180_show_float(40, 70, b, 3, 1);
+//		system_delay_ms(10);
+//		
+//       }
+//}

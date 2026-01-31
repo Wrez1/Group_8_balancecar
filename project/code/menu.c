@@ -16,7 +16,7 @@
 // KEY_4: 退出编辑模式，回到非编辑模式
 
 extern uint8_t balance_mode_active;
-
+extern uint8_t blue_mode_active;
 // 主菜单显示函数
 void showpalce0(uint8 x){
     switch(x){
@@ -400,18 +400,9 @@ void menu(uint8* xp, uint8* yp,
             if(*yp > 2) *yp = 1;
             
             if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
-                // 退出时关闭平衡模式并停止电机
-//                balance_mode_active = 0;
-//                motor_control(0, 0);
                 *yp = 0;  // 返回主菜单
                 key_clear_state(KEY_4);
             }
-            
-            // 如果不是在GO状态（即不是在yp==2），确保平衡模式关闭
-//            if (*yp != 2) {
-//                balance_mode_active = 0;
-//                motor_control(0, 0);
-//            }
         }
         else if(*xp == 2) {  // MODE2
             showplace2(*yp);
@@ -454,6 +445,9 @@ void menu(uint8* xp, uint8* yp,
             if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
                 *yp += 1;
                 key_clear_state(KEY_3);
+                if (*yp == 2) {
+                    blue_mode_active = 1;
+                }
             }
             if(*yp > 2) *yp = 1;
             if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
