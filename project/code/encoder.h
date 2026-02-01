@@ -15,11 +15,12 @@
 extern int16 Encoder_Left;
 extern int16 Encoder_Right;
 int16_t Get_Count1(void);
-int16_t Get_Count2(void);
+int16_t Get_Count2(void); 
 void encoder_init(void);
 void pit_encoder_handler (void);
 void clear_location(void);
 extern int Speed_L,Speed_R;
 extern float Location;
+void encoder_Read();
 
 #endif

@@ -476,6 +476,11 @@
               <FilePath>..\code\flash.h</FilePath>
             </File>
             <File>
+              <FileName>track.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\code\track.c</FilePath>
+            </File>
+            <File>
               <FileName>icm20602.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\code\icm20602.c</FilePath>
@@ -484,11 +489,6 @@
               <FileName>icm20602.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\code\icm20602.h</FilePath>
-            </File>
-            <File>
-              <FileName>led.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\code\led.c</FilePath>
             </File>
             <File>
               <FileName>led.h</FileName>
@@ -546,9 +546,9 @@
               <FilePath>..\code\navigation.h</FilePath>
             </File>
             <File>
-              <FileName>track.c</FileName>
+              <FileName>led.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\code\track.c</FilePath>
+              <FilePath>..\code\led.c</FilePath>
             </File>
             <File>
               <FileName>track.h</FileName>

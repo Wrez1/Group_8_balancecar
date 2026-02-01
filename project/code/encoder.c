@@ -58,3 +58,4 @@ void clear_location(void)
 {
     Location = 0.0f;  // 直接重置为0
 }
+

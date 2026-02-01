@@ -13,8 +13,9 @@ void sensor_init(void) {
     gpio_init(E9,  GPI, 0, GPI_PULL_UP);
     gpio_init(E10, GPI, 0, GPI_PULL_UP);
     gpio_init(E11, GPI, 0, GPI_PULL_UP);
-    gpio_init(E12,  GPI, 0, GPI_PULL_UP);
-    gpio_init(E13,  GPI, 0, GPI_PULL_UP);
+	gpio_init(E12, GPI, 0, GPI_PULL_UP);
+    gpio_init(E13, GPI, 0, GPI_PULL_UP);
     gpio_init(E14, GPI, 0, GPI_PULL_UP);
     gpio_init(E15, GPI, 0, GPI_PULL_UP);
+
 }

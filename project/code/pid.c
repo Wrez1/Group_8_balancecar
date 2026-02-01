@@ -4,6 +4,7 @@
 #include "encoder.h"
 #include "icm20602.h"
 #include "math.h"
+#include "menu.h"
 void PID_Init(PID_t *p)
 {
 	p->Target = 0;
@@ -55,7 +56,7 @@ extern PID_t TurnPID;
 extern float SpeedLeft,SpeedRight;
 extern float AveSpeed,DifSpeed;
 
-float Mechanical_Zero_Pitch = 1.80f;
+float Mechanical_Zero_Pitch = -0.3f;
 void Angle_PIDControl(void)
 {
 	if (Car_Attitude.Pitch > 70 || Car_Attitude.Pitch < -70)	//角度过大保护	
@@ -79,16 +80,28 @@ void Angle_PIDControl(void)
 //速度环
 extern PID_t SpeedPID;
 extern float SpeedLeft,SpeedRight;
-extern float AveSpeed,DifSpeed;
+float AveSpeed,DifSpeed,AveSpeed_mode2;
+// 定义一个静态变量来保存上一次的速度
+static float Last_AveSpeed = 0.0f;
+static float Last_AveSpeed_mode2 = 0.0f;
 void Speed_PIDControl(void)
 {
 		SpeedLeft=(int16_t)Get_Count1();
 		SpeedRight=(int16_t)Get_Count2();
 		pit_encoder_handler();
-		AveSpeed=(SpeedLeft+SpeedRight)/2.f;
-		DifSpeed=SpeedLeft-SpeedRight;
+		float Raw_Speed=(SpeedLeft+SpeedRight)/2.f;
 		
-		SpeedPID.Actual=AveSpeed;
+		if(CarMode==2){
+			AveSpeed_mode2 = Raw_Speed * 0.66f + Last_AveSpeed_mode2 * 0.34f;
+			Last_AveSpeed_mode2 = AveSpeed_mode2; // 更新历史值
+			SpeedPID.Actual=AveSpeed_mode2;
+		}
+		else{
+			AveSpeed = Raw_Speed * 0.66f + Last_AveSpeed * 0.34f;
+			Last_AveSpeed = AveSpeed; // 更新历史值
+			SpeedPID.Actual=AveSpeed;
+		}
+		DifSpeed=SpeedLeft-SpeedRight;
 		PID_Update(&SpeedPID);
 		//AnglePID.Target=SpeedPID.Out;
 	
@@ -103,11 +116,16 @@ void Speed_PIDControl(void)
 extern PID_t TurnPID;
 // 定义全局变量
 float Turn_Target = 0.0;
+float Line_Turn_Target=0.0;
 void Turn_PIDControl(void)
 {
+	if(CarMode==5){
     // 目标：来自蓝牙 (Turn_Target)
-    TurnPID.Target = Turn_Target;
-    
+		TurnPID.Target = Turn_Target;
+    }
+	else if(CarMode==2){
+		TurnPID.Target=Line_Turn_Target;
+	}
     // 反馈：来自陀螺仪 Z 轴 (Real_Gyro_Z)
     // 注意：Real_Gyro_Z 必须是“去零漂”后的值 (在 icm20602.c 里处理)
     TurnPID.Actual = Real_Gyro_Z; 
@@ -118,6 +136,48 @@ void Turn_PIDControl(void)
     // 输出：DifPWM 留给 Cascade 函数去叠加
     DifPWM = TurnPID.Out;
 }
+
+// 1. 定义全局变量
+PID_t PositionPID;       // 位置环结构体
+float Target_Location = 0.0f; // 目标位置
+volatile uint8 Control_Mode = 0;// 0:蓝牙遥控(开环), 1:位置模式(闭环/惯导)
+extern float Location;
+
+// 2. 初始化函数 (在 All_PID_Init 中调用)
+// 参数建议：位置环不需要太快，Kp 给小一点，限幅限制最大巡航速度
+void Position_PID_Init(void)
+{
+    PID_Init(&PositionPID);
+    PositionPID.Kp = 0.05f;      // 试探值：误差1000脉冲 -> 目标速度 50
+    PositionPID.Ki = 0.0f;       // 位置环不需要积分
+    PositionPID.Kd = 0.0f;       // 位置环不需要微分 (速度环已经是微分了)
+    
+    PositionPID.OutMax = 20.0f;  // ★最大巡航速度限制 (防止飞车)
+    PositionPID.OutMin = -20.0f;
+}
+
+// 3. 位置环控制函数
+void Position_PIDControl(void)
+{
+    PositionPID.Target = Target_Location; // 你想去哪
+    PositionPID.Actual = Location;        // 你在哪
+    
+    PID_Update(&PositionPID);
+    
+    // ★★★ 核心连接：位置环的输出 = 速度环的目标 ★★★
+    // 只有在 Control_Mode == 1 时，这个值才会被写入 SpeedPID.Target
+    // 具体的写入操作，我们放在 isr.c 里做，比较安全
+	// 如果误差小于 50 个脉冲 (大概几毫米)，就认为到了，不发力
+    if (fabsf(PositionPID.Target - PositionPID.Actual) < 50.0f)
+    {
+        PositionPID.Out = 0.0f;
+    }
+}
+
+
+// 引用 encoder.c 里的全局位置变量
+extern float Location;
+
 
 extern Attitude_t Car_Attitude; // 你的姿态结构体
 extern PID_t GyroPID;           // 新增
@@ -132,7 +192,7 @@ void Angle_Gyro_Cascade_Control(void)
     // 1. 安全保护 (炸机保护)
     // ==========================================
     // 角度过大（倒地），强制关闭电机
-    if (Car_Attitude.Pitch > 45.0f || Car_Attitude.Pitch < -45.0f) 
+    if (Car_Attitude.Pitch > 55.0f || Car_Attitude.Pitch < -55.0f) 
     {
         motor_control(0, 0);
 		// 2. ★★★ 关键：清空所有 PID 的积分和历史误差 ★★★
@@ -193,7 +253,7 @@ void Angle_Gyro_Cascade_Control(void)
     // ==========================================
     // TurnPID.Out 在 isr.c 或 navigation.c 里计算
 	
-	float Safe_Angle = 8.0f;
+	float Safe_Angle = 14.0f;
     // 差速控制：左加右减（或反之）
     if (fabsf(Car_Attitude.Pitch - Mechanical_Zero_Pitch) < Safe_Angle)
     {

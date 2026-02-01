@@ -4,6 +4,8 @@
 #include "menu.h"
 #include "flash.h"
 #include "motor.h" 
+#include "encoder.h" // ★★★ 必须添加，否则读不到 Location
+#include "pid.h"     // 确保能访问 Control_Mode 和 Target_Location
 //非编辑模式（PID设置界面）：
 // KEY_1: 切换到下一个环（角度环→速度环→转向环）
 // KEY_2: 切换到上一个环（转向环→速度环→角度环）
@@ -16,6 +18,8 @@
 // KEY_4: 退出编辑模式，回到非编辑模式
 
 extern uint8_t CarMode;
+uint8 xp=1,yp=0;
+
 
 // 主菜单显示函数
 void showpalce0(uint8 x){
@@ -363,10 +367,10 @@ void menu(uint8* xp, uint8* yp,
     static uint8 param_sel = 1; // 当前选择的参数：1-KP，2-KI，3-KD
     static uint8 mech_zero_edit = 0;
 	
-	if (CarMode) {
-            CarMode = 0;
-            motor_control(0, 0);
-        }  
+//	if (balance_mode_active) {
+//            balance_mode_active = 0;
+//            motor_control(0, 0);
+//        }  
     if(*yp == 0) {  // 主菜单
         showpalce0(*xp);
         
@@ -382,7 +386,7 @@ void menu(uint8* xp, uint8* yp,
             *yp += 1;
             key_clear_state(KEY_3);
         }
-        
+        CarMode = 0;
         if(*xp > 7) *xp = 1;
         if(*xp < 1) *xp = 7;
     }
@@ -392,37 +396,43 @@ void menu(uint8* xp, uint8* yp,
             if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
                 *yp += 1;
                 key_clear_state(KEY_3);
+			}
                 // 如果进入GO状态，开启平衡模式
                 if (*yp == 2) {
                     CarMode = 1;
+					
+					// 1. 设置为位置模式 (启用位置环->速度环->直立环串级)
+                    Control_Mode = 1;
+					
+					// 2. ★关键★：锁死当前位置！
+                    // 如果不写这句，Target_Location 默认为 0，
+                    // 而你当前 Location 可能是 5000，车子会疯了一样倒车。
+                    Target_Location = Location; 
+                    
+                    // 3. 重置位置环 PID (清除历史积分，防止跳变)
+                    PID_Init(&PositionPID); 
+                    PositionPID.Kp = -0.03f;      // 确保参数已加载
+                    PositionPID.OutMax = 12.0f;  // 确保限幅安全
                 }
-            }
+            
             if(*yp > 2) *yp = 1;
             
             if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
-                // 退出时关闭平衡模式并停止电机
-//                CarMode = 0;
-//                motor_control(0, 0);
                 *yp = 0;  // 返回主菜单
                 key_clear_state(KEY_4);
             }
-            
-            // 如果不是在GO状态（即不是在yp==2），确保平衡模式关闭
-//            if (*yp != 2) {
-//                CarMode = 0;
-//                motor_control(0, 0);
-//            }
         }
         else if(*xp == 2) {  // MODE2
             showplace2(*yp);
             if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
                 *yp += 1;
                 key_clear_state(KEY_3);
-                if (*yp == 2) {
-                    CarMode = 2;
-                }
             }
             if(*yp > 2) *yp = 1;
+                if (*yp == 2) {
+                    CarMode = 2;
+					Control_Mode = 0;
+                }
             if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
                 *yp = 0;
                 key_clear_state(KEY_4);
@@ -433,11 +443,12 @@ void menu(uint8* xp, uint8* yp,
             if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
                 *yp += 1;
                 key_clear_state(KEY_3);
-                if (*yp == 2) {
-                    CarMode = 3;
-                }
             }
             if(*yp > 2) *yp = 1;
+                if (*yp == 2) {
+                    CarMode = 3;
+					Control_Mode = 0;
+                }
             if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
                 *yp = 0;
                 key_clear_state(KEY_4);
@@ -448,10 +459,11 @@ void menu(uint8* xp, uint8* yp,
             if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
                 *yp += 1;
                 key_clear_state(KEY_3);
+            }
                 if (*yp == 2) {
                     CarMode = 4;
+					Control_Mode = 0;
                 }
-            }
             if(*yp > 2) *yp = 1;
             if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
                 *yp = 0;
@@ -465,6 +477,7 @@ void menu(uint8* xp, uint8* yp,
                 key_clear_state(KEY_3);
                 if (*yp == 2) {
                     CarMode = 5;
+					Control_Mode = 0;
                 }
             }
             if(*yp > 2) *yp = 1;

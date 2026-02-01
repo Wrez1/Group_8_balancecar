@@ -1,22 +1,28 @@
 #ifndef __TRACK_H
 #define __TRACK_H
 
+#include "zf_common_headfile.h"
 
-// 传感器权值数组（7路传感器）
+// 传感器权值
 extern const int8_t Track_Weight[4];
 
-// 上一次的循迹输出（记忆用）
-extern float Track_Last_Output;
-
-// 是否检测到线
+// 循迹状态
+extern float   Track_Last_Output;
 extern uint8_t Track_Has_Line;
-
-// 计算误差（根据传感器的输出）
+extern uint8 point_round;
+// 误差计算
 float Track_Calc_Error(void);
 
-// 控制任务（将误差传递给PID控制）
+// 循迹控制
 void Track_Control_Task(void);
 
+// 进线 / 出线检测
 void Line_Edge_Check_Task(void);
 
-#endif // __TRACK_H
+// 停车状态
+uint8_t Track_Is_Stopped(void);
+
+// 提示
+void led_buzzer(void);
+
+#endif

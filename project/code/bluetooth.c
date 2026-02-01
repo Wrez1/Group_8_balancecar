@@ -67,7 +67,7 @@ void Bluetooth_Control(float *SpeedTarget,float *TurnTarget)
 		    int8_t RH = atoi(strtok(NULL, ","));
 		    int8_t RV = atoi(strtok(NULL, ","));
 			
-			*SpeedTarget=LV/10;
+			*SpeedTarget=LV/8;
 		    *TurnTarget=-RH*1.2;
 		}
 		

@@ -31,7 +31,12 @@ extern PID_t GyroPID;
 extern PID_t TurnPID;      // 转向环 PID 对象
 extern PID_t SpeedPID;     // 建议把速度环也加上，以后可能会用到
 extern PID_t AnglePID;     // 建议把直立环也加上
+extern PID_t PositionPID; // ★★★ 新增：位置环 PID 对象 ★★★
 
+extern float Target_Location; // 目标位置 (想要去哪里)
+extern volatile uint8_t Control_Mode;  // 控制模式开关
+
+void Position_PIDControl(void); // 新增函数声明
 void Gyro_PIDControl(void); // 新增函数声明
 void PID_Init(PID_t *p);
 void PID_Update(PID_t *p);
@@ -40,10 +45,10 @@ void Speed_PIDControl(void);
 void Turn_PIDControl(void);
 extern float Real_Gyro_X;  // 真实角速度
 extern float Target_Gyro;  // 目标角速度
-
+extern float AveSpeed,DifSpeed,AveSpeed_mode2;
  //新增：声明 Z 轴角速度 和 转向目标变量
 extern float Turn_Target;  // 转向目标 (由遥控器或循迹算法赋值)
-
+extern float Line_Turn_Target;
 extern PID_t GyroPID;      // 角速度环 PID 对象
 void Angle_Gyro_Cascade_Control(void);
 #endif

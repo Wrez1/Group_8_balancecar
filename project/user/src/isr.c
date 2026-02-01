@@ -4,8 +4,10 @@
 #include "pid.h"
 #include "navigation.h"
 #include "motor.h"
+#include "encoder.h"
 #include "menu.h"
 #include "track.h"
+#include "sensor.h"
 
 
 // 惯导用的累积里程
@@ -27,13 +29,34 @@ void TIM1_UP_IRQHandler (void)
 {
 	// 一句话搞定所有读取和解算，传入 dt = 0.005 (5ms)
 	IMU_Get_Data_Task(0.005f);
-    
-	
+    tft180_show_int(10, 20, CarMode, 1 );
+	tft180_show_int(20, 20, point_round, 1 );
+//	tft180_show_int(10, 20, Speed_Loop_Count, 2 );
 	// === 2. 速度环与惯导 (20ms 分频) ===
     Speed_Loop_Count++;
     if(Speed_Loop_Count >= 4) // 5ms * 4 = 20ms
     {
         Speed_Loop_Count = 0;
+		
+		// ★★★ 在这里插入模式选择逻辑 ★★★
+        if (Control_Mode == 1) 
+        {
+            // ---【模式 1：位置闭环 / 惯导 / 定点平衡】---
+            encoder_Read();           // 1. 更新当前里程 Location
+            Position_PIDControl();    // 2. 运行位置 PID
+            
+            // 3. 强行接管速度环目标
+            // 位置环算出该跑多快，速度环就得听它的
+            SpeedPID.Target = PositionPID.Out; 
+        }
+        else 
+        {
+            // ---【模式 0：蓝牙遥控 / 循迹】---
+            // 1. 依然更新里程 (为了切模式时坐标不乱)
+            encoder_Read(); 
+            
+            // 2. 位置环不工作，SpeedPID.Target 保持 main 里蓝牙设定的值
+        }
         
         // 2.1 运行速度环 (更新 SpeedLeft/Right)
         Speed_PIDControl(); 
@@ -58,7 +81,8 @@ void TIM1_UP_IRQHandler (void)
     // 如果是惯导复现模式，把 N.Final_Out 注入给转向环
     if(N.Nag_SystemRun_Index == 3) {
          // 将角度误差转换为转向差速 (系数 2.0 可调)
-         Turn_Target = N.Final_Out * 2.0f; 
+         Turn_Target = N.Final_Out * 2.0f;
+		
     } else {
          // 正常模式 (比如遥控或循迹)
          TurnPID.Target = TurnPID.Target; 
@@ -76,11 +100,17 @@ void TIM1_UP_IRQHandler (void)
 //-------------------------------------------------------------------------------------------------------------------
 void TIM2_IRQHandler (void)
 {
+//	tft180_show_int(10, 20, D1, 2 );
+//	tft180_show_int(15, 20, D2, 2 );
+//	tft180_show_int(20, 20, D3, 2 );
+//	tft180_show_int(25, 20, D4, 2 );
     // 此处编写用户代码
 	if(CarMode == 2)
 	{
-		Line_Edge_Check_Task();
-		Track_Control_Task();   // ✅ 就在这里
+//		Adjust_Startup_Params();
+//		Line_Edge_Check_Task();
+		Track_Control_Task();
+		Line_Edge_Check_Task();// ✅ 就在这里
 	}		
     // 此处编写用户代码
     TIM2->SR &= ~TIM2->SR;                                                      // 清空中断状态
