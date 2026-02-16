@@ -10,10 +10,6 @@
 #include "flash.h"
 #include "bluetooth.h"
 
-float SpeedLeft,SpeedRight;
-float AveSpeed,DifSpeed;
-int16_t LeftPWM,RightPWM;
-int16_t AvePWM,DifPWM;
 
 extern float Mechanical_Zero_Pitch;
 extern float Turn_Target;
@@ -35,17 +31,23 @@ void All_PID_Init(void)
     
     // 初始化角速度环
     PID_Init(&GyroPID);
-    GyroPID.Kp = 47.0f;  // 经验值：内环 P 通常比外环大
+    GyroPID.Kp = 34.0f;  // 经验值：内环 P 通常比外环大
     GyroPID.Ki = 0.0f;  // 内环通常不需要积分，除非有静差
-    GyroPID.Kd = 4.0f;  // 噪声大时不要加 D
+    GyroPID.Kd = 0.8f;  // 噪声大时不要加 D
     GyroPID.OutMax = 10000; // PWM 限幅
     GyroPID.OutMin = -10000;
 	
+	// ★ 必须加限幅，防止疯转
+    GyroPID.ErrorIntMax = 800.0f; 
+    GyroPID.ErrorIntMin = -800.0f;
+	
 	// ★★★ 新增位置环参数初始化 ★★★
     PID_Init(&PositionPID);
-    PositionPID.Kp = -0.03f;      
-    PositionPID.OutMax = 12.0f;  
-    PositionPID.OutMin = -12.0f;
+    PositionPID.Kp = 0.003f;
+    PositionPID.Kd = 0.002f;	
+    PositionPID.OutMax = 40.0f;  
+    PositionPID.OutMin = -40.0f;
+
 	// 设定初始目标为 0 (假设上电时就在原点)
     Target_Location = 0.0f; 
     
@@ -53,12 +55,12 @@ void All_PID_Init(void)
 }
 
 PID_t AnglePID = {
-	.Kp = 16.8f,
+	.Kp = 16.3f,
 	.Ki = 0.0f,
 	.Kd = 0.0f,
 	
-	.OutMax = 2000,
-	.OutMin = -2000,
+	.OutMax = 3000,
+	.OutMin = -3000,
 	
 	.OutOffset = 0.0f,
 	
@@ -67,27 +69,29 @@ PID_t AnglePID = {
 };
 
 PID_t SpeedPID = {
-	.Kp = 1.28f,
-	.Ki = 0.018f,
+	.Kp = 0.32f,
+	.Ki = 0.005f,
 	.Kd = 0.0f,
 	
-	.OutMax = 8.0f,
-	.OutMin = -11.2f,
+	.OutMax = 11.5f,
+	.OutMin = -25.0f,
 	
-	.ErrorIntMax = 500.0f,
-	.ErrorIntMin = -500.0f,
+	.ErrorIntMax = 300.0f,
+	.ErrorIntMin = -300.0f,
 };
 
+
+
 PID_t TurnPID = {
-	.Kp = 46.0f,
+	.Kp = 0.0f,
 	.Ki = 0.0f,
-	.Kd = 0.17f,
+	.Kd = 0.0f,
 	
 	.OutMax = 3000.0f,
 	.OutMin = -3000.0f,
 	
-	.ErrorIntMax = 0.0f,
-	.ErrorIntMin = 0.0f,
+	.ErrorIntMax = 1000.0f,
+	.ErrorIntMin = -1000.0f,
 };
 
 uint8 xp=1,yp=0;
@@ -102,18 +106,16 @@ int main(void)
 	tft180_clear();
 	encoder_init();
     IMU_Init_Task();
+	IMU_Calibration();
     motor_init();
 	All_PID_Init(); 
 	Bluetooth_Init();
+	sensor_init();
 //	flash_load();
 //	flash_load_mech_zero();
+	pit_ms_init(TIM1_PIT, 2);
 	while(1){
-		if (balance_mode_active) {
-			pit_ms_init(TIM1_PIT, 5);
-			Control_Mode = 1;
-		}
-		else if (blue_mode_active) {
-			pit_ms_init(TIM1_PIT, 5);
+		if (blue_mode_active) {
 			Control_Mode = 0;
 			// ★★★ 修改这里：分权控制 ★★★
             if (Control_Mode == 0) 
@@ -129,7 +131,6 @@ int main(void)
                 // (可选) 你依然可以让蓝牙控制转向 Turn_Target
                 // Bluetooth_Control_TurnOnly(&Turn_Target); 
             }
-			system_delay_ms(10);
 		}
 //		flash_save();
 		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
@@ -147,7 +148,7 @@ int main(void)
 //    encoder_init();
 //    motor_init();
 //    
-//    motor_control(2000, 4000);
+//    motor_control(190, 190);
 //    
 //    return 0;
 //}
@@ -172,4 +173,59 @@ int main(void)
 //		system_delay_ms(10);
 //		
 //       }
+//}
+
+//姿态解算
+//int main(void)
+//{
+//    // 1. 硬件初始化
+//    clock_init(SYSTEM_CLOCK_120M);
+//    debug_init(); 
+//    tft180_init();
+//    //encoder_init();
+//    IMU_Init_Task();
+//    //motor_init();
+//    //IMU_Calibration();
+//    
+//    // 2. 蓝牙初始化
+//    //Bluetooth_Init(); 
+
+//    // 3. PID 与 参数加载
+//    //All_PID_Init(); 
+//    //flash_load();   
+
+//    // 4. 开启控制
+//    pit_ms_init(TIM1_PIT, 2);
+//	
+//	
+//    while(1)
+//    {
+//        /// === 任务 1: 蓝牙处理 ===
+//      /*  Bluetooth_Task();
+//        
+//        // === 任务 2: 菜单刷新 (4个PID) ===
+//        menu(&menu_xp, &menu_yp, &AnglePID, &GyroPID, &SpeedPID, &TurnPID);
+//        static uint8_t send_count = 0;
+//        send_count++;
+//        if(send_count >= 20) // 简易分频
+//        {
+//            send_count = 0;
+//            
+//            // 示例：发送当前 Pitch 角度
+//            // 只要取消注释下面这行，手机蓝牙助手就能收到数据
+//             Bluetooth_Send("Pitch:%.2f\r\n", Car_Attitude.Pitch);
+//            
+//            system_delay_ms(10); // 小延时释放 CPU 资源
+//        }*/
+//		tft180_show_float(1,10,Car_Attitude.Pitch,2,4);
+//		//tft180_show_float(1,20,Car_Attitude.Roll,2,4);
+//		//tft180_show_float(1,30,Car_Attitude.Yaw,2,4);
+//		//printf("%.3f,%.3f,%.3f\n", Car_Attitude.Pitch, Car_Attitude.Roll, Car_Attitude.Yaw);
+//		//system_delay_ms(2);
+//		//tft180_show_int(1,70,Get_Count1(),4);
+//		//tft180_show_int(1,80,Get_Count2(),4);
+//		//motor_control(1000,1000);
+//		
+//    }
+//		
 //}

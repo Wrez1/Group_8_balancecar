@@ -6,6 +6,7 @@
 #include "motor.h" 
 #include "encoder.h" // ★★★ 必须添加，否则读不到 Location
 #include "pid.h"     // 确保能访问 Control_Mode 和 Target_Location
+#include "icm20602.h"
 //非编辑模式（PID设置界面）：
 // KEY_1: 切换到下一个环（角度环→速度环→转向环）
 // KEY_2: 切换到上一个环（转向环→速度环→角度环）
@@ -16,6 +17,8 @@
 // KEY_2: 减少当前参数值
 // KEY_3: 切换参数（KP→KI→KD→KP）
 // KEY_4: 退出编辑模式，回到非编辑模式
+
+extern float SpeedLeft, SpeedRight;
 
 extern uint8_t balance_mode_active;
 extern uint8_t blue_mode_active;
@@ -118,10 +121,10 @@ void showplace1(uint8 x){
 		case 2:
 			tft180_show_string(0, 10, "    MODE 1 balance     ");
 			tft180_show_string(0, 50, "    GO!GO!GO!          ");
-			tft180_show_string(0,60 ,"                        ");
-			tft180_show_string(0,70 ,"                        ");
-			tft180_show_string(0,80 ,"                        ");
-			tft180_show_string(0,90 ,"                        ");
+			tft180_show_float(0,60 , TurnPID.Actual, 3 , 3);
+			tft180_show_float(0,70 , Car_Attitude.Pitch, 3, 3);
+			tft180_show_float(0,80 , SpeedLeft,4,3);
+			tft180_show_float(0,90 , SpeedRight,4,3);
 			tft180_show_string(0,100,"                        ");
             tft180_show_string(0,110,"                        ");
 			break;
@@ -219,9 +222,9 @@ void showplace5(uint8 x){
 			tft180_show_string(0, 10, "    MODE 5: remote     ");
 			tft180_show_string(0, 50, "   GO!GO!GO!           ");
 			tft180_show_string(0,60 ,"                        ");
-			tft180_show_string(0,70 ,"                        ");
-			tft180_show_string(0,80 ,"                        ");
-			tft180_show_string(0,90 ,"                        ");
+			tft180_show_float(0,70 , Car_Attitude.Pitch, 3, 3);
+			tft180_show_float(0,80 , SpeedLeft,4,3);
+			tft180_show_float(0,90 , SpeedRight,4,3);
 			tft180_show_string(0,100,"                        ");
 		    tft180_show_string(0,110,"                        ");
 			break;
@@ -364,11 +367,7 @@ void menu(uint8* xp, uint8* yp,
     static uint8 ring_sel = 1;  // 当前选择的环：1-角度环，2-速度环，3-转向环
     static uint8 param_sel = 1; // 当前选择的参数：1-KP，2-KI，3-KD
     static uint8 mech_zero_edit = 0;
-	
-	if (balance_mode_active) {
-            balance_mode_active = 0;
-            motor_control(0, 0);
-        }  
+			  
     if(*yp == 0) {  // 主菜单
         showpalce0(*xp);
         
@@ -397,19 +396,25 @@ void menu(uint8* xp, uint8* yp,
                 // 如果进入GO状态，开启平衡模式
                 if (*yp == 2) {
                     balance_mode_active = 1;
-					
+					IMU_Instant_Init();
 					// 1. 设置为位置模式 (启用位置环->速度环->直立环串级)
                     Control_Mode = 1;
 					
 					// 2. ★关键★：锁死当前位置！
                     // 如果不写这句，Target_Location 默认为 0，
                     // 而你当前 Location 可能是 5000，车子会疯了一样倒车。
-                    Target_Location = Location; 
+                    // ★★★ 2. 核心：位置清零 ★★★
+                    // 告诉 PID：“我现在就在原点，别乱跑”
+                    extern float Location;
+                    Location = 0.0f; 
+                    Target_Location = 0.0f; 	
                     
-                    // 3. 重置位置环 PID (清除历史积分，防止跳变)
-                    PID_Init(&PositionPID); 
-                    PositionPID.Kp = -0.03f;      // 确保参数已加载
-                    PositionPID.OutMax = 12.0f;  // 确保限幅安全
+                    // 3. 重置PID (清除历史积分，防止跳变)
+                    //PID_Init(&PositionPID); 
+					PID_Init(&SpeedPID);
+                    PID_Init(&AnglePID);
+                    PID_Init(&TurnPID);
+	
                 }
             }
             if(*yp > 2) *yp = 1;
@@ -424,6 +429,20 @@ void menu(uint8* xp, uint8* yp,
             if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
                 *yp += 1;
                 key_clear_state(KEY_3);
+				// 进入 GO!GO!GO!
+                if (*yp == 2) {
+                    balance_mode_active = 1; // 借用这个标志位开启定时器中断
+                    
+                    // ★★★ 核心修改：切换到循迹模式 (2) ★★★
+                    Control_Mode = 2; 
+                    
+                    // 清零 PID 防止突变
+                    SpeedPID.Target = 0;
+                    Turn_Target = 0;
+                    PID_Init(&SpeedPID);
+					PID_Init(&AnglePID);
+                    PID_Init(&TurnPID);
+                }
             }
             if(*yp > 2) *yp = 1;
             if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
@@ -463,6 +482,16 @@ void menu(uint8* xp, uint8* yp,
                 if (*yp == 2) {
                     blue_mode_active = 1;
 					Control_Mode = 0;
+					
+					// === 核心修改：切除速度环“记忆” ===
+                    SpeedPID.Ki = 0.0f;          // ★ 关掉积分！
+                    SpeedPID.ErrorIntMax = 0.0f; // 限幅也设为0，双重保险
+					SpeedPID.ErrorIntMin = 0.0f; // 限幅也设为0，双重保险
+					
+					PID_Init(&SpeedPID);
+                    PID_Init(&AnglePID);
+                    PID_Init(&TurnPID);
+					
                 }
             }
             if(*yp > 2) *yp = 1;

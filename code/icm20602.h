@@ -23,6 +23,7 @@ extern float Real_Gyro_Y;
 extern float Real_Gyro_Z;
 // 函数声明
 void IMU_Init_Task(void);
+void IMU_Instant_Init(void);
 void IMU_Get_Data_Task(float dt); // dt: 循环周期，单位秒 (例如 0.005)
 void IMU_Calibration(void);
 #endif

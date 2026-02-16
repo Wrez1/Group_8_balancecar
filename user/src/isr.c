@@ -13,9 +13,14 @@ int64 Total_Encoder_R = 0;
 // 外部引用
 extern PID_t SpeedPID; // 速度环会更新 SpeedLeft/Right
 extern float SpeedLeft, SpeedRight;
+// 引用 main.c 里的模式标志位
+extern uint8_t balance_mode_active;
+extern uint8_t blue_mode_active;
 
 // 速度环分频计数器
 static uint8_t Speed_Loop_Count = 0;
+
+//static uint8_t Control_Divider = 0;
 
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     TIM1 的定时器更新中断服务函数 启动 .s 文件定义 不允许修改函数名称
@@ -23,36 +28,42 @@ static uint8_t Speed_Loop_Count = 0;
 //-------------------------------------------------------------------------------------------------------------------
 void TIM1_UP_IRQHandler (void)
 {
-	// 一句话搞定所有读取和解算，传入 dt = 0.005 (5ms)
-	IMU_Get_Data_Task(0.005f);
+	// 一句话搞定所有读取和解算，传入 dt = 0.002 (2ms)
+	IMU_Get_Data_Task(0.002f);
     
+	//Control_Divider++;
+	encoder_Get_Speed();
+	
+	// 2. ★★★ 核心修改：安全锁 ★★★
+    // 如果 两个模式都没激活，就强制关电机，并退出中断
+    if (balance_mode_active == 0 && blue_mode_active == 0)
+    {
+        motor_control(0, 0); // 确保电机不转
+        
+        // 清标志位并退出
+        TIM1->SR &= ~TIM1->SR;
+        return; 
+    }
 	
 	// === 2. 速度环与惯导 (20ms 分频) ===
     Speed_Loop_Count++;
-    if(Speed_Loop_Count >= 4) // 5ms * 4 = 20ms
+//	if (Control_Divider >= 2) 
+//    {
+//        Control_Divider = 0; // 清零，等待下一次
+    if(Speed_Loop_Count >= 10) // 5ms * 4 = 20ms
     {
         Speed_Loop_Count = 0;
 		
 		// ★★★ 在这里插入模式选择逻辑 ★★★
         if (Control_Mode == 1) 
         {
-            // ---【模式 1：位置闭环 / 惯导 / 定点平衡】---
-            encoder_Read();           // 1. 更新当前里程 Location
+            // ---【模式 1：位置闭环 / 惯导 / 定点平衡】---           // 1. 更新当前里程 Location
             Position_PIDControl();    // 2. 运行位置 PID
             
             // 3. 强行接管速度环目标
             // 位置环算出该跑多快，速度环就得听它的
             SpeedPID.Target = PositionPID.Out; 
         }
-        else 
-        {
-            // ---【模式 0：蓝牙遥控 / 循迹】---
-            // 1. 依然更新里程 (为了切模式时坐标不乱)
-            encoder_Read(); 
-            
-            // 2. 位置环不工作，SpeedPID.Target 保持 main 里蓝牙设定的值
-        }
-        
         // 2.1 运行速度环 (更新 SpeedLeft/Right)
         Speed_PIDControl(); 
         
@@ -84,7 +95,7 @@ void TIM1_UP_IRQHandler (void)
 	Turn_PIDControl();
 	Angle_Gyro_Cascade_Control();
 	
-	
+//}
 	TIM1->SR &= ~TIM1->SR;
 }
 

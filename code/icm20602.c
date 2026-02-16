@@ -11,13 +11,18 @@ Attitude_t Car_Attitude;
 #define GYRO_DEAD_ZONE  0.4f
 
 
-float Gyro_X_Offset = -0.3449f;
-float Gyro_Y_Offset = 0.8135f;
-float Gyro_Z_Offset = -0.3587f;
+//float Gyro_X_Offset = -0.5524f;
+//float Gyro_Y_Offset = 0.7862f;
+//float Gyro_Z_Offset = -0.3352f;
+float Gyro_X_Offset = 0.0f; 
+float Gyro_Y_Offset = 0.0f;
+float Gyro_Z_Offset = 0.0f;
 float Real_Gyro_X = 0.0f; 
 float Real_Gyro_Y = 0.0f;
 float Real_Gyro_Z = 0.0f;
-
+// 滤波历史变量
+static float Last_Gyro_X = 0.0f;
+static float Last_Gyro_Z = 0.0f;
 // ---------------------------------------------------------
 // IMU 初始化
 // ---------------------------------------------------------
@@ -29,6 +34,29 @@ void IMU_Init_Task(void)
         // 初始化失败，卡死或报错
         // zf_log(0, "ICM20602 Init Failed!"); 
     }
+}
+
+// ★★★ 新增：封装好的瞬时初始化函数 ★★★
+// 供外部（如菜单）调用，实现一键重置姿态
+void IMU_Instant_Init(void)
+{
+    // 1. 获取当前最新的加速度原始数据
+    icm20602_get_acc();
+    
+    // 2. 转换为物理值 (单位 g)
+    float ax = icm20602_acc_transition(icm20602_acc_x);
+    float ay = icm20602_acc_transition(icm20602_acc_y);
+    float az = icm20602_acc_transition(icm20602_acc_z);
+    
+    // 3. 调用 Mahony 的重置接口
+    // ★ 关键：在这里统一处理坐标系映射，防止外部调用搞错方向
+    // 你的 Update 函数用的是: -ay, -ax, az
+    // 所以这里保持一致
+    Mahony_Init(-ay, -ax, az); 
+    
+    // 4. 立即计算一次角度，确保全局变量 Car_Attitude 更新
+    Mahony_Get_Angles();
+	Car_Attitude.Yaw = 0.0f;
 }
 
 // ---------------------------------------------------------
@@ -74,9 +102,13 @@ void IMU_Inertial_Nav_Calc(float ax, float ay, float az, float pitch_deg, float 
 }
 
 // ---------------------------------------------------------
-// 主循环调用函数 (建议放在 5ms 或 10ms 定时中断里)
+// 主循环调用函数 (建议放在 5ms 定时中断里)
 // dt: 两次调用的时间间隔，单位秒
 // ---------------------------------------------------------
+
+// 引入电机速度用于判断静止
+extern float SpeedLeft, SpeedRight;
+
 void IMU_Get_Data_Task(float dt)
 {
     icm20602_get_acc();
@@ -87,42 +119,62 @@ void IMU_Get_Data_Task(float dt)
     float ay = icm20602_acc_transition(icm20602_acc_y);
     float az = icm20602_acc_transition(icm20602_acc_z);
     
-	/*
-	if (fabsf(Speed_L) < 2.0f && fabsf(Speed_R) < 2.0f) 
+	// 获取原始数据（不减Offset，为了计算动态Offset）
+    float raw_gx = icm20602_gyro_transition(icm20602_gyro_x);
+    float raw_gy = icm20602_gyro_transition(icm20602_gyro_y);
+    float raw_gz = icm20602_gyro_transition(icm20602_gyro_z);
+	
+	// ================== 核心优化：动态零偏校准 ==================
+    // 判断条件：左右轮速极低（近似静止）
+    if (fabsf(SpeedLeft) < 0.5f && fabsf(SpeedRight) < 0.5f)
     {
-        // 2. 判断是否“手扶稳定”
-        // 当前陀螺仪读数波动不能太大，防止你手扶着车在晃，导致错误的校准
-        // 假设当前读数和之前的 Offset 相差在 2度/秒以内，说明是温漂，而不是运动
-        if (fabsf(raw_gz - Gyro_Z_Offset) < 2.0f) 
+        // 进一步判断：当前读数必须在合理范围内（防止被撞击时的瞬间大值污染Offset）
+        // 假设原本Offset是-0.35，如果突然读到20，说明车被撞了，不是零漂
+        if (fabsf(raw_gz - Gyro_Z_Offset) < 5.0f) 
         {
-            // 3. 核心：指数加权移动平均 (EMA)
-            // 让 Offset 极其缓慢地“爬”向当前的读数
-            // 0.001 是更新速度，越小越慢越稳。意味着每次修正 0.1% 的误差
-            Gyro_Z_Offset = Gyro_Z_Offset * 0.999f + raw_gz * 0.001f;
+            // 使用低通滤波缓慢更新 Offset (0.005 是更新系数，越小越慢越稳)
+            Gyro_Z_Offset = Gyro_Z_Offset * 0.995f + raw_gz * 0.005f;
+            
+            // 在绝对静止时，强制输出 0，消除微小积分
+            // 注意：这里去掉了原来简单的死区逻辑，改为基于状态的死区
+            raw_gz = Gyro_Z_Offset; 
         }
-        
-        // 4. 既然停着，直接锁死输出为 0 (强力死区)
-        gz_deg = 0.0f;
     }
-    else 
-    {
-        // 车动的时候，使用动态更新后的 Offset
-        gz_deg = raw_gz - Gyro_Z_Offset;
-    }
-	*/
+    // ==========================================================
+	
 	
     // 2. 转换陀螺仪 (先减零漂，再转弧度！)
-    // 死区逻辑保留！这对 Mahony 同样有效
-    float gx_deg = icm20602_gyro_transition(icm20602_gyro_x) - Gyro_X_Offset;
-    float gy_deg = icm20602_gyro_transition(icm20602_gyro_y) - Gyro_Y_Offset;
-    float gz_deg = icm20602_gyro_transition(icm20602_gyro_z) - Gyro_Z_Offset;
+    // 2. 减去动态更新后的 Offset
+    float gx_deg = raw_gx - Gyro_X_Offset;
+    float gy_deg = raw_gy - Gyro_Y_Offset;
+    float gz_deg = raw_gz - Gyro_Z_Offset;
 	
-
-    if (gz_deg > -GYRO_DEAD_ZONE && gz_deg < GYRO_DEAD_ZONE) gz_deg = 0.0f;	// 死区
+    if (fabsf(gx_deg) < GYRO_DEAD_ZONE) gx_deg = 0.0f;
+    if (fabsf(gy_deg) < GYRO_DEAD_ZONE) gy_deg = 0.0f;
+    if (fabsf(gz_deg) < GYRO_DEAD_ZONE) gz_deg = 0.0f;
+	
+	// ★★★ 核心修改：加入黄金比例滤波器 (既快又滑) ★★★
+    // ==============================================================
+    // 系数 0.6f 意味着：60% 相信最新的数据，40% 相信历史数据
+    // 相比之前的 0.3f，现在的响应速度快了一倍，但依然能滤掉高频毛刺
+    // 如果觉得还不够快，可以改到 0.7f ~ 0.8f
+    float Alpha = 0.6f; 
+    
+    gx_deg = gx_deg * Alpha + Last_Gyro_X * (1.0f - Alpha);
+    Last_Gyro_X = gx_deg; // 更新历史值
+	
+	gz_deg = gz_deg * Alpha + Last_Gyro_Z * (1.0f - Alpha);
+    Last_Gyro_Z = gz_deg;
 	
 	Real_Gyro_X = gx_deg;
     Real_Gyro_Y = gy_deg;
     Real_Gyro_Z = gz_deg;
+	
+	// ★★★ 4. 纯积分计算 Yaw (必须用滤过波的 gz_deg) ★★★
+    // ==============================================================
+    // dt = 0.002s (由 isr.c 传入)
+    // 符号说明：如果发现转左 Yaw 变小，就改成 -=
+    Car_Attitude.Yaw += gz_deg * dt;
 	
     float gx = gx_deg * 0.0174533f; // 转弧度
     float gy = gy_deg * 0.0174533f;
@@ -146,6 +198,8 @@ void IMU_Calibration(void)
     tft180_clear();
     tft180_show_string(0, 0, "Calibrating...");
     tft180_show_string(0, 20, "Don't Move!");
+	
+	system_delay_ms(3000);
     
     // 2. 循环读取 1000 次 (让它测久一点，更准)
     for(int i = 0; i < 1000; i++)
@@ -178,6 +232,6 @@ void IMU_Calibration(void)
     tft180_show_string(0, 70, "Z:");
     tft180_show_float(40, 70, Gyro_Z_Offset, 2, 4);
     
-    // 5. 死循环卡住 (防止程序跑飞，给你时间拍照/抄写)
-    while(1);
+    system_delay_ms(1000); 
+    tft180_clear();
 }

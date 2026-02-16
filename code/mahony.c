@@ -20,9 +20,9 @@
 //---------------------------------------------------------------------------------------------------
 // Definitions
 
-#define sampleFreq	200.0f			// sample frequency in Hz
-#define twoKpDef	(2.0f * 0.4f)	// 2 * proportional gain
-#define twoKiDef	(2.0f * 0.004f)	// 2 * integral gain
+#define sampleFreq	 500.0f			// sample frequency in Hz
+#define twoKpDef	(2.0f * 0.5f)	// 2 * proportional gain
+#define twoKiDef	(2.0f * 0.01f)	// 2 * integral gain
 
 //---------------------------------------------------------------------------------------------------
 // Variable definitions
@@ -176,10 +176,10 @@ void MahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float
 		if(twoKi > 0.0f) {
 			integralFBx += twoKi * halfex * (1.0f / sampleFreq);	// integral error scaled by Ki
 			integralFBy += twoKi * halfey * (1.0f / sampleFreq);
-			integralFBz += twoKi * halfez * (1.0f / sampleFreq);
+			//integralFBz += twoKi * halfez * (1.0f / sampleFreq);
 			gx += integralFBx;	// apply integral feedback
 			gy += integralFBy;
-			gz += integralFBz;
+			//gz += integralFBz;
 		}
 		else {
 			integralFBx = 0.0f;	// prevent integral windup
@@ -190,7 +190,7 @@ void MahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float
 		// Apply proportional feedback
 		gx += twoKp * halfex;
 		gy += twoKp * halfey;
-		gz += twoKp * halfez;
+		//gz += twoKp * halfez;
 	}
 	
 	// Integrate rate of change of quaternion
@@ -239,12 +239,57 @@ void Mahony_Get_Angles(void)
     float roll_rad = atan2f(2.0f * (q0 * q1 + q2 * q3), q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3);
     
     // 3. 计算 Yaw (航向角) - 导航核心
-    float yaw_rad = atan2f(2.0f * (q0 * q3 + q1 * q2), q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3);
+//    float yaw_rad = atan2f(2.0f * (q0 * q3 + q1 * q2), q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3);
     
     // 4. 转为角度 (57.29578 = 180/PI)
     Car_Attitude.Pitch = -pitch_rad * 57.2957795f;
     Car_Attitude.Roll  = roll_rad  * 57.2957795f;
-    Car_Attitude.Yaw   = -yaw_rad   * 57.2957795f;
+//    Car_Attitude.Yaw   = -yaw_rad   * 57.2957795f;
+}
+
+
+// ★★★ 新增：瞬时姿态初始化函数 ★★★
+// ax, ay, az: 必须与 icm20602.c 中传入 MahonyAHRSupdateIMU 的方向一致！
+// 即: -ay, -ax, az
+void Mahony_Init(float ax, float ay, float az)
+{
+    float norm;
+    float pitch_rad = 0.0f, roll_rad = 0.0f;
+    float cr, sr, cp, sp, cy, sy; 
+    
+    // 1. 归一化加速度
+    norm = invSqrt(ax * ax + ay * ay + az * az);
+    if (norm == 0.0f) return; 
+    ax *= norm;
+    ay *= norm;
+    az *= norm;
+    
+    // 2. 反推初始角度 
+    // 根据重力向量反推欧拉角
+    if (az != 0.0f) {
+        pitch_rad = atan2f(-ax, az); // 俯仰角
+        roll_rad  = atan2f(ay, az);  // 横滚角
+    }
+    
+    // 3. 欧拉角转四元数 (初始 Yaw 设为 0)
+    cy = 1.0f; 
+    sy = 0.0f; 
+    cp = cosf(pitch_rad * 0.5f);
+    sp = sinf(pitch_rad * 0.5f);
+    cr = cosf(roll_rad * 0.5f);
+    sr = sinf(roll_rad * 0.5f);
+
+    // 直接重写全局四元数
+    q0 = cr * cp * cy + sr * sp * sy;
+    q1 = sr * cp * cy - cr * sp * sy;
+    q2 = cr * sp * cy + sr * cp * sy;
+    q3 = cr * cp * sy - sr * sp * cy;
+    
+    // 4. 清空积分误差，防止历史残留
+    extern volatile float integralFBx, integralFBy, integralFBz;
+    integralFBx = 0.0f;
+    integralFBy = 0.0f;
+    integralFBz = 0.0f;
 }
 
 //====================================================================================================
