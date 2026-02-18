@@ -8,7 +8,7 @@ Attitude_t Car_Attitude;
 // 常量定义
 #define RAD_TO_DEG  57.2957795f
 #define DEG_TO_RAD  0.01745329f
-#define GYRO_DEAD_ZONE  0.4f
+#define GYRO_DEAD_ZONE  0.3f
 
 
 //float Gyro_X_Offset = -0.5524f;
@@ -22,7 +22,15 @@ float Real_Gyro_Y = 0.0f;
 float Real_Gyro_Z = 0.0f;
 // 滤波历史变量
 static float Last_Gyro_X = 0.0f;
-static float Last_Gyro_Z = 0.0f;
+//static float Last_Gyro_Z = 0.0f;
+
+// 定义两个历史变量，分别用于不同的滤波通道
+static float Last_Gyro_Z_Nav = 0.0f;  // 导航用 (轻滤波)
+static float Last_Gyro_Z_Ctrl = 0.0f; // 控制用 (重滤波)
+
+// 定义全局变量 (记得去 .h 声明一下)
+float Gyro_Z_For_Nav = 0.0f;  // ★ 专门给积分 Yaw 用的
+float Gyro_Z_For_Ctrl = 0.0f; // ★ 专门给 PID 用的
 // ---------------------------------------------------------
 // IMU 初始化
 // ---------------------------------------------------------
@@ -126,17 +134,21 @@ void IMU_Get_Data_Task(float dt)
 	
 	// ================== 核心优化：动态零偏校准 ==================
     // 判断条件：左右轮速极低（近似静止）
-    if (fabsf(SpeedLeft) < 0.5f && fabsf(SpeedRight) < 0.5f)
+    if (fabsf(SpeedLeft) < 5.0f && fabsf(SpeedRight) < 5.0f)
     {
-        // 进一步判断：当前读数必须在合理范围内（防止被撞击时的瞬间大值污染Offset）
-        // 假设原本Offset是-0.35，如果突然读到20，说明车被撞了，不是零漂
-        if (fabsf(raw_gz - Gyro_Z_Offset) < 5.0f) 
+        // 计算当前读数与已知零偏的偏差
+        float diff = fabsf(raw_gz - Gyro_Z_Offset);
+        
+        // 只有偏差很小时，才认为是静止噪声，予以消除
+        // 如果偏差很大（比如被撞了），说明车子在动，不能强制归零
+        if (diff < 5.0f) 
         {
-            // 使用低通滤波缓慢更新 Offset (0.005 是更新系数，越小越慢越稳)
-            Gyro_Z_Offset = Gyro_Z_Offset * 0.995f + raw_gz * 0.005f;
+            // ★★★ 修改点 1：不要动态更新 Offset，风险太大 ★★★
+            // Gyro_Z_Offset = Gyro_Z_Offset * 0.995f + raw_gz * 0.005f; 
             
-            // 在绝对静止时，强制输出 0，消除微小积分
-            // 注意：这里去掉了原来简单的死区逻辑，改为基于状态的死区
+            // ★★★ 修改点 2：直接暴力把输出锁死为 0 ★★★
+            // 既然认为是静止，那就让物理值直接为 0
+            // (注意：这里改 raw_gz 是为了欺骗后面的 gz_deg 计算公式)
             raw_gz = Gyro_Z_Offset; 
         }
     }
@@ -151,30 +163,57 @@ void IMU_Get_Data_Task(float dt)
 	
     if (fabsf(gx_deg) < GYRO_DEAD_ZONE) gx_deg = 0.0f;
     if (fabsf(gy_deg) < GYRO_DEAD_ZONE) gy_deg = 0.0f;
-    if (fabsf(gz_deg) < GYRO_DEAD_ZONE) gz_deg = 0.0f;
+    if (fabsf(gz_deg) < 0.0f) gz_deg = 0.0f;
 	
-	// ★★★ 核心修改：加入黄金比例滤波器 (既快又滑) ★★★
-    // ==============================================================
-    // 系数 0.6f 意味着：60% 相信最新的数据，40% 相信历史数据
-    // 相比之前的 0.3f，现在的响应速度快了一倍，但依然能滤掉高频毛刺
-    // 如果觉得还不够快，可以改到 0.7f ~ 0.8f
+	//6. X轴/Y轴 滤波 (直立平衡用，中等滤波)
     float Alpha = 0.6f; 
-    
     gx_deg = gx_deg * Alpha + Last_Gyro_X * (1.0f - Alpha);
-    Last_Gyro_X = gx_deg; // 更新历史值
-	
-	gz_deg = gz_deg * Alpha + Last_Gyro_Z * (1.0f - Alpha);
-    Last_Gyro_Z = gz_deg;
-	
-	Real_Gyro_X = gx_deg;
+    Last_Gyro_X = gx_deg;
+    
+    // ==============================================================
+    // ★★★ 7. Z轴 双轨滤波 (核心修改) ★★★
+    // ==============================================================
+    
+    // 通道A：导航专用 (轻滤波，保真实，低延迟)
+    // Alpha = 0.9 表示 90% 信新数据，几乎无延迟
+    float Alpha_Nav = 0.9f;
+    Gyro_Z_For_Nav = gz_deg * Alpha_Nav + Last_Gyro_Z_Nav * (1.0f - Alpha_Nav);
+    Last_Gyro_Z_Nav = Gyro_Z_For_Nav;
+    
+    // 通道B：控制专用 (重滤波，去噪声，高Kp)
+    // Alpha = 0.2 表示只信 20% 新数据，极度平滑，适合 PID
+    float Alpha_Ctrl = 0.2f;
+    Gyro_Z_For_Ctrl = gz_deg * Alpha_Ctrl + Last_Gyro_Z_Ctrl * (1.0f - Alpha_Ctrl);
+    Last_Gyro_Z_Ctrl = Gyro_Z_For_Ctrl;
+    
+    // 更新全局变量 (Real_Gyro_Z 一般用于显示，建议显示 Nav 的)
+    Real_Gyro_X = gx_deg;
     Real_Gyro_Y = gy_deg;
-    Real_Gyro_Z = gz_deg;
+    Real_Gyro_Z = Gyro_Z_For_Nav;
+	
+	
+//	// ★★★ 核心修改：加入黄金比例滤波器 (既快又滑) ★★★
+//    // ==============================================================
+//    // 系数 0.6f 意味着：60% 相信最新的数据，40% 相信历史数据
+//    // 相比之前的 0.3f，现在的响应速度快了一倍，但依然能滤掉高频毛刺
+//    // 如果觉得还不够快，可以改到 0.7f ~ 0.8f
+//    float Alpha = 0.6f; 
+//    
+//    gx_deg = gx_deg * Alpha + Last_Gyro_X * (1.0f - Alpha);
+//    Last_Gyro_X = gx_deg; // 更新历史值
+//	
+//	gz_deg = gz_deg * Alpha + Last_Gyro_Z * (1.0f - Alpha);
+//    Last_Gyro_Z = gz_deg;
+//	
+//	Real_Gyro_X = gx_deg;
+//    Real_Gyro_Y = gy_deg;
+    //Real_Gyro_Z = gz_deg;
 	
 	// ★★★ 4. 纯积分计算 Yaw (必须用滤过波的 gz_deg) ★★★
     // ==============================================================
     // dt = 0.002s (由 isr.c 传入)
     // 符号说明：如果发现转左 Yaw 变小，就改成 -=
-    Car_Attitude.Yaw += gz_deg * dt;
+    Car_Attitude.Yaw += Gyro_Z_For_Nav * dt;
 	
     float gx = gx_deg * 0.0174533f; // 转弧度
     float gy = gy_deg * 0.0174533f;

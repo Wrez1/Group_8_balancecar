@@ -9,10 +9,13 @@
 #include "sensor.h"
 #include "flash.h"
 #include "bluetooth.h"
-
+#include "buzzer.h"
 
 extern float Mechanical_Zero_Pitch;
 extern float Turn_Target;
+
+volatile uint32_t ISR_Execute_Time_us = 0;
+
 // 菜单变量
 uint8_t menu_xp = 0;
 uint8_t menu_yp = 1;
@@ -69,21 +72,21 @@ PID_t AnglePID = {
 };
 
 PID_t SpeedPID = {
-	.Kp = 0.32f,
-	.Ki = 0.005f,
+	.Kp = 0.32f, 
+	.Ki = 0.010f,
 	.Kd = 0.0f,
 	
 	.OutMax = 11.5f,
 	.OutMin = -25.0f,
 	
-	.ErrorIntMax = 300.0f,
-	.ErrorIntMin = -300.0f,
+	//.ErrorIntMax = 300.0f,
+	//.ErrorIntMin = -300.0f,
 };
 
 
 
 PID_t TurnPID = {
-	.Kp = 0.0f,
+	.Kp = 35.0f,
 	.Ki = 0.0f,
 	.Kd = 0.0f,
 	
@@ -98,22 +101,51 @@ uint8 xp=1,yp=0;
 float a=0,b=0;
 int main(void)
 {
-	debug_init();
-	clock_init(SYSTEM_CLOCK_120M);
-	key_init(10);
-	tft180_init();
-	tft180_set_color(RGB565_BLACK, RGB565_WHITE);
-	tft180_clear();
-	encoder_init();
+	// 1. 基础硬件初始化
+    clock_init(SYSTEM_CLOCK_120M);
+    debug_init();
+    key_init(10);
+    buzzer_init();
+    tft180_init();
+    tft180_set_color(RGB565_BLACK, RGB565_WHITE);
+    tft180_clear();
+    
+    // 2. 传感器与电机初始化
+    encoder_init();
     IMU_Init_Task();
-	IMU_Calibration();
+    IMU_Calibration();
     motor_init();
-	All_PID_Init(); 
-	Bluetooth_Init();
-	sensor_init();
-//	flash_load();
-//	flash_load_mech_zero();
-	pit_ms_init(TIM1_PIT, 2);
+    Bluetooth_Init();
+    sensor_init();
+    
+    // 3. ★★★ 关键顺序：先加载默认参数，再尝试读取 Flash ★★★
+    All_PID_Init(); // 先载入代码里写的硬编码默认值 (比如 Kp=16.3)
+    
+    // 2. 尝试从 Flash 读取参数
+    if (flash_load() == 1) 
+    {
+        // 读取成功！(Flash 里有有效数据)
+        // 可以在屏幕显示一下
+         tft180_show_string(0, 0, "Flash Load OK!");
+		system_delay_ms(1000);
+    }
+    else 
+    {
+        // 读取失败！(Flash 是空的)
+        // 这时候 AnglePID 依然保持 All_PID_Init 里的默认值 (Kp=16.3)
+        // 我们顺便把这份默认值写入 Flash，方便下次使用
+        
+        tft180_show_string(0, 0, "Init Flash...");
+        flash_save(); // 自动保存一次默认值
+        //flash_save_mech_zero(); // 顺便也存一下机械中值
+        
+        buzzer_on(1); 
+        system_delay_ms(200); 
+        buzzer_on(0); // 响一声提示初始化完成
+    }
+    // 4. 开启控制中断
+    pit_ms_init(TIM1_PIT, 2); // 2ms 中断
+	tft180_clear();
 	while(1){
 		if (blue_mode_active) {
 			Control_Mode = 0;
@@ -132,9 +164,9 @@ int main(void)
                 // Bluetooth_Control_TurnOnly(&Turn_Target); 
             }
 		}
-//		flash_save();
+		//flash_save();
 		menu(&xp,&yp,&AnglePID, &SpeedPID, &TurnPID,&Mechanical_Zero_Pitch);
-//		flash_save();
+		//flash_save();
 		key_scanner();
 		system_delay_ms(10);
 	}
@@ -145,11 +177,11 @@ int main(void)
 //    clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
 //    debug_init();                                                               // 初始化默认 Debug UART
 //	
-//    encoder_init();
-//    motor_init();
+//   // encoder_init();
+//    //motor_init();
 //    
-//    motor_control(190, 190);
-//    
+//    //motor_control(190, 190);
+//    buzzer_init();
 //    return 0;
 //}
 
@@ -182,10 +214,10 @@ int main(void)
 //    clock_init(SYSTEM_CLOCK_120M);
 //    debug_init(); 
 //    tft180_init();
-//    //encoder_init();
+//    encoder_init();
 //    IMU_Init_Task();
-//    //motor_init();
-//    //IMU_Calibration();
+//    motor_init();
+//    IMU_Calibration();
 //    
 //    // 2. 蓝牙初始化
 //    //Bluetooth_Init(); 
@@ -217,11 +249,12 @@ int main(void)
 //            
 //            system_delay_ms(10); // 小延时释放 CPU 资源
 //        }*/
-//		tft180_show_float(1,10,Car_Attitude.Pitch,2,4);
+//		//tft180_show_float(1,10,Car_Attitude.Pitch,2,4);
 //		//tft180_show_float(1,20,Car_Attitude.Roll,2,4);
-//		//tft180_show_float(1,30,Car_Attitude.Yaw,2,4);
+//		tft180_show_float(1,30,Car_Attitude.Yaw,4 ,4);
+//		motor_control(0,0);
 //		//printf("%.3f,%.3f,%.3f\n", Car_Attitude.Pitch, Car_Attitude.Roll, Car_Attitude.Yaw);
-//		//system_delay_ms(2);
+//		system_delay_ms(2);
 //		//tft180_show_int(1,70,Get_Count1(),4);
 //		//tft180_show_int(1,80,Get_Count2(),4);
 //		//motor_control(1000,1000);

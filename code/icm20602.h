@@ -21,6 +21,8 @@ extern float Gyro_X_Offset, Gyro_Y_Offset, Gyro_Z_Offset;
 extern float Real_Gyro_X;
 extern float Real_Gyro_Y;
 extern float Real_Gyro_Z;
+extern float Gyro_Z_For_Nav;
+extern float Gyro_Z_For_Ctrl;
 // º¯ÊýÉùÃ÷
 void IMU_Init_Task(void);
 void IMU_Instant_Init(void);

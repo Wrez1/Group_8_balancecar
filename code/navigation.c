@@ -1,7 +1,8 @@
 #include "navigation.h"
 #include "flash.h"      // 引入 Flash 存取函数
 #include <string.h>
-
+#include "zf_common_headfile.h"
+#include "buzzer.h"
 // 定义大数组 (放在 RAM 里)
 int32_t Nav_Record_Buffer[MaxSize]; 
 Nag N;
@@ -15,7 +16,9 @@ void Init_Nag(void)
     // 上电尝试从 Flash 加载上次录制的路径
     if(flash_load_nag() == 1)
     {
-        // 加载成功 (可选: 蜂鸣器响一声提示)
+        buzzer_on(1);
+        system_delay_ms(200);
+        buzzer_on(0);
     }
 }
 
@@ -25,6 +28,9 @@ void Run_Nag_Save(void)
     // 累积里程
     N.Mileage_All += (float)(L_Mileage + R_Mileage) / 2.0f; 
     
+	// ★ 新增：起步保护
+    // 如果录制刚开始（前5个点），强制把 Yaw 设为 0
+    // 或者是等待车子跑出 10cm 后才开始真正记录	
     if(N.Mileage_All >= Nag_Set_mileage) 
     {
         // 满了自动停止
@@ -49,18 +55,29 @@ void Run_Nag_GPS(void)
 
     if(N.Mileage_All >= Nag_Set_mileage)
     {
+		N.Run_index++;
+
+        N.Mileage_All = 0;
+		
         // 跑完了
         if(N.Run_index >= N.Save_index) {
             N.Nag_Stop_f = 1; 
             N.Final_Out = 0;
             return;
         }
+        // =========================================================
+        // ★★★ 核心改进：引入前瞻 (Look-ahead) ★★★
+        // =========================================================
+        // 定义前瞻距离：比如提前看 10 个点 (如果你是 1cm 一个点，就是提前 8cm)
+        // 这个值越大，入弯越早，反应越快；太大则会切弯太深。
+        uint16_t look_ahead = 15; 
+        uint16_t target_idx = N.Run_index + look_ahead;
+
+        // 边界检查，防止数组越界
+        if(target_idx >= N.Save_index) target_idx = N.Save_index - 1;
 
         // 读取目标角度
         N.Angle_Run = (float)(Nav_Record_Buffer[N.Run_index]) / 100.0f;
-        N.Run_index++;
-
-        N.Mileage_All = 0;
     }
 }
 
@@ -89,6 +106,6 @@ void Nag_System(void)
     {
         Run_Nag_GPS(); 
         // 计算偏差：当前Yaw - 目标Yaw (加到转向环)
-        N.Final_Out = Nag_Yaw - N.Angle_Run;
+        N.Final_Out = N.Angle_Run - Nag_Yaw;
     }
 }

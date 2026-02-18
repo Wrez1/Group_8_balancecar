@@ -46,6 +46,46 @@ void PID_Update(PID_t *p)
 	p->Actual1 = p->Actual;
 }
 
+// ============================================================
+// ★★★ 增量式 PID + 积分滤波 (源自学长代码优化) ★★★
+// ============================================================
+void PID_Update_Incre(PID_t *p)
+{
+    // 1. 计算误差
+    p->Error1 = p->Error0;              // 保存上次误差
+    p->Error0 = p->Target - p->Actual;  // 当前误差
+    
+    // 2. 计算 P 项增量 (Kp * (当前误差 - 上次误差))
+    // 代表：根据误差的变化趋势调整输出
+    float P_Term = p->Kp * (p->Error0 - p->Error1);
+    
+    // 3. 计算 I 项增量 (Ki * 当前误差) + ★滤波★
+    // 原始积分意图
+    float Raw_I_Term = p->Ki * p->Error0;
+    
+    // ★ 学长同款滤波：0.9 * 当前 + 0.1 * 历史
+    // 作用：让电流变化更柔顺，减少编码器噪声带来的“抽搐”
+    float I_Term = Raw_I_Term * 0.85f + p->Last_Integral * 0.15f;
+    
+    // 更新历史值，供下次滤波使用
+    p->Last_Integral = I_Term; 
+    
+    // 4. 计算 D 项 (你的速度环不需要 D，这里留空或写 0)
+    // 如果以后要加，公式是 Kd * (Error0 - 2*Error1 + Error2)
+    float D_Term = 0.0f; 
+    
+    // 5. 计算总增量
+    float Delta_Out = P_Term + I_Term + D_Term;
+    
+    // 6. 累加到最终输出 (Out += Delta)
+    p->Out += Delta_Out;
+    
+    // 7. 输出限幅 (增量式的天然抗饱和)
+    if (p->Out > p->OutMax) { p->Out = p->OutMax; }
+    if (p->Out < p->OutMin) { p->Out = p->OutMin; }
+}
+
+
 // ==========================================================
 // 速度环 Speed_PIDControl
 // 周期：20ms (在 ISR 中分频调用)
@@ -53,31 +93,60 @@ void PID_Update(PID_t *p)
 extern PID_t SpeedPID;
 extern float SpeedLeft, SpeedRight;
 // 引用转向目标，用于特殊处理原地旋转
-extern float Turn_Target; 
+extern float Turn_Target;
 
 void Speed_PIDControl(void)
 {
-    // 1. 获取真实速度 (encoder.c 已经滤波好了，直接用)
+    // 1. 获取真实速度
     float CurrentAveSpeed = (SpeedLeft + SpeedRight) / 2.0f;
     
-    // 2. 特殊逻辑：原地旋转时屏蔽速度环
-    // 如果想要大角度转向，且期望速度很低，说明是原地自旋
+    // 2. 原地旋转时的特殊处理
     if (fabsf(Turn_Target) > 40.0f && fabsf(SpeedPID.Target) < 20.0f)
     {
-        // 欺骗 PID：实际速度 = 目标速度，误差为 0
-        SpeedPID.Actual = SpeedPID.Target; 
-        SpeedPID.ErrorInt = 0; // 清空积分
+        // 欺骗 PID
+        SpeedPID.Actual = SpeedPID.Target;
+        
+        // ★★★ 关键：增量式必须清空这些状态，否则切回来会疯 ★★★
+        SpeedPID.Error0 = 0.0f;
+        SpeedPID.Error1 = 0.0f;
+        SpeedPID.Last_Integral = 0.0f; // 清空滤波历史
+        SpeedPID.Out = 0.0f;           // 清空输出 (不发力)
     }
     else
     {
         SpeedPID.Actual = CurrentAveSpeed;
+        
+        // 3. ★★★ 核心修改：调用新的增量式函数 ★★★
+        PID_Update_Incre(&SpeedPID);
     }
-
-    // 3. 计算 PID
-    PID_Update(&SpeedPID);
     
-    // 注意：SpeedPID.Out 会在 Cascade 函数中叠加到 Mechanical_Zero_Pitch
+    // SpeedPID.Out 会在 Cascade 函数里使用，这里不用管
 }
+
+//位置式速度环
+//void Speed_PIDControl(void)
+//{
+//    // 1. 获取真实速度 (encoder.c 已经滤波好了，直接用)
+//    float CurrentAveSpeed = (SpeedLeft + SpeedRight) / 2.0f;
+//    
+//    // 2. 特殊逻辑：原地旋转时屏蔽速度环
+//    // 如果想要大角度转向，且期望速度很低，说明是原地自旋
+//    if (fabsf(Turn_Target) > 40.0f && fabsf(SpeedPID.Target) < 20.0f)
+//    {
+//        // 欺骗 PID：实际速度 = 目标速度，误差为 0
+//        SpeedPID.Actual = SpeedPID.Target; 
+//        SpeedPID.ErrorInt = 0; // 清空积分
+//    }
+//    else
+//    {
+//        SpeedPID.Actual = CurrentAveSpeed;
+//    }
+
+//    // 3. 计算 PID
+//    PID_Update(&SpeedPID);
+//    
+//    // 注意：SpeedPID.Out 会在 Cascade 函数中叠加到 Mechanical_Zero_Pitch
+//}
 
 // ==========================================================
 // 转向环 Turn_PIDControl
@@ -89,8 +158,8 @@ float Turn_Target = 0.0; // 全局变量，由蓝牙或循迹逻辑赋值
 void Turn_PIDControl(void)
 {
     TurnPID.Target = Turn_Target;
-    TurnPID.Actual = Real_Gyro_Z; // 使用去零漂后的 Z 轴角速度
-    
+    //TurnPID.Actual = Real_Gyro_Z; // 使用去零漂后的 Z 轴角速度
+    TurnPID.Actual = Gyro_Z_For_Ctrl;
     PID_Update(&TurnPID);
     
 }

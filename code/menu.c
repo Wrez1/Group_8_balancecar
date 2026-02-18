@@ -7,6 +7,9 @@
 #include "encoder.h" // ★★★ 必须添加，否则读不到 Location
 #include "pid.h"     // 确保能访问 Control_Mode 和 Target_Location
 #include "icm20602.h"
+#include "navigation.h"
+#include "isr.h"
+#include "buzzer.h"
 //非编辑模式（PID设置界面）：
 // KEY_1: 切换到下一个环（角度环→速度环→转向环）
 // KEY_2: 切换到上一个环（转向环→速度环→角度环）
@@ -181,29 +184,60 @@ void showplace3(uint8 x){
 	}
 }
 
-void showplace4(uint8 x){
-	switch(x){
-		case 1:
-			tft180_show_string(0, 10, "    MODE 4: path memory");
-			tft180_show_string(0, 50, "  >READY               ");
-			tft180_show_string(0,60 ,"                        ");
-			tft180_show_string(0,70 ,"                        ");
-			tft180_show_string(0,80 ,"                        ");
-			tft180_show_string(0,90 ,"                        ");
-			tft180_show_string(0,100,"                        ");
-		    tft180_show_string(0,110,"                        ");
-		    break;
-		case 2:
-			tft180_show_string(0, 10, "    MODE 4: path memory");
-			tft180_show_string(0, 50, "   GO!GO!GO!           ");
-			tft180_show_string(0,60 ,"                        ");
-			tft180_show_string(0,70 ,"                        ");
-			tft180_show_string(0,80 ,"                        ");
-			tft180_show_string(0,90 ,"                        ");
-			tft180_show_string(0,100,"                        ");
-		    tft180_show_string(0,110,"                        ");
-			break;
-	}
+// 增加 sub_mode 参数：0=录制，1=复现
+void showplace4(uint8 x, uint8 sub_mode){
+    switch(x){
+        case 1: // === 准备界面 (Ready) ===
+            tft180_show_string(0, 10, "    MODE 4: Inertial   ");
+            tft180_show_string(0, 30, "--------------------");
+            
+            // 根据 sub_mode 显示光标 >
+            if(sub_mode == 0) {
+                tft180_show_string(0, 50, " > [TEACH] RECORD      ");
+                tft180_show_string(0, 70, "   [RUN]   REPLAY      ");
+            } else {
+                tft180_show_string(0, 50, "   [TEACH] RECORD      ");
+                tft180_show_string(0, 70, " > [RUN]   REPLAY      ");
+            }
+            
+            // ★★★ 核心修复：擦除主菜单的残影 (Y=60, 80, 90) ★★★
+            tft180_show_string(0, 60, "                       "); 
+            tft180_show_string(0, 80, "                       ");
+            tft180_show_string(0, 90, "                       ");
+            
+            tft180_show_string(0, 100," KEY1/2: Select        ");
+            tft180_show_string(0, 110," KEY3: GO!             ");
+            break;
+            
+        case 2: // === 运行界面 (Running) ===
+            tft180_show_string(0, 10, "    MODE 4: RUNNING    ");
+            tft180_show_string(0, 30, "--------------------");
+            
+            if(sub_mode == 0) 
+                 tft180_show_string(0, 50, "   Status: RECORDING   ");
+            else 
+                 tft180_show_string(0, 50, "   Status: REPLAYING   ");
+            
+            // ★★★ 擦除准备界面的残影 ★★★
+            tft180_show_string(0, 60, "                       ");
+            
+            // 显示当前 Yaw
+            tft180_show_string(0, 70, "Yaw:                   ");
+            tft180_show_float(40, 70, Car_Attitude.Yaw, 3, 1);
+            
+            // ★★★ 擦除准备界面的残影 ★★★
+            tft180_show_string(0, 80, "                       ");
+			
+			// 显示里程/进度
+			tft180_show_string(0, 90, "Index: ");
+			tft180_show_int(50, 90, N.Save_index, 4);
+                 
+            // ★★★ 擦除准备界面的残影 (Line 100 是 KEY1/2 Select) ★★★
+            tft180_show_string(0, 100,"                       ");
+            
+            tft180_show_string(0, 110," KEY4: STOP/SAVE       ");
+            break;
+    }
 }
 
 void showplace5(uint8 x){
@@ -356,7 +390,8 @@ void showplace7(uint8 che, float mech_zero) {
 
 // 全局变量：编辑模式标志
 uint8 che = 0;
-
+// 在 menu 函数外部定义静态变量，记住上次的选择
+static uint8_t nag_sub_mode = 0; // 0=录制, 1=复现
 // 修改后的菜单函数
 void menu(uint8* xp, uint8* yp, 
           PID_Params* angle_pid, 
@@ -463,13 +498,104 @@ void menu(uint8* xp, uint8* yp,
             }
         }
         else if(*xp == 4) {  // MODE4
-            showplace4(*yp);
-            if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
-                *yp += 1;
-                key_clear_state(KEY_3);
+            showplace4(*yp, nag_sub_mode);
+            // === 状态 1: 准备界面 (选择功能) ===
+            if(*yp == 1) {
+                // KEY1 / KEY2: 切换子模式 (录制/复现)
+                if(key_get_state(KEY_1) == KEY_SHORT_PRESS || key_get_state(KEY_2) == KEY_SHORT_PRESS) {
+                    nag_sub_mode = !nag_sub_mode; // 0变1，1变0
+                    key_clear_state(KEY_1);
+                    key_clear_state(KEY_2);
+                }
+                
+                // KEY3: 确认执行 (GO!)
+                if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
+                    *yp = 2; // 进入运行状态
+                    key_clear_state(KEY_3);
+                    
+                    // 重置姿态 (把当前车头设为 0 度)
+                    IMU_Instant_Init();
+                    
+                    if(nag_sub_mode == 0) {
+                        // =============== [录制模式] ===============
+                        balance_mode_active = 0; // 关平衡
+                        blue_mode_active = 1;    // ★开中断权限 (借用蓝牙标志位让ISR运行)
+                        Control_Mode = 0;        // 开环
+                        
+                        // 惯导配置
+                        N.Nag_SystemRun_Index = 1; // 1 = 录制状态
+                        N.Save_index = 0;          // 从头录
+                        N.Mileage_All = 0;
+                        N.End_f = 0;
+                        
+                        // 确保电机无力 (手推模式)
+                        SpeedPID.Target = 0;
+                        Turn_Target = 0;
+                        //motor_control(0,0);
+                    } 
+                    else {
+                        // =============== [复现模式] ===============
+                        balance_mode_active = 1; // ★开平衡！
+                        blue_mode_active = 0;
+                        Control_Mode = 0;        // 1=位置/惯导模式 (ISR里会调用Position_PIDControl)
+                        
+                        // 惯导配置
+                        N.Nag_SystemRun_Index = 3; // 3 = 复现状态
+                        N.Run_index = 0;
+                        N.Mileage_All = 0;
+                        N.Nag_Stop_f = 0;
+                        
+                        // PID 重置
+                        PID_Init(&SpeedPID);
+                        PID_Init(&AnglePID);
+                        PID_Init(&TurnPID);
+						PID_Init(&PositionPID);
+                        
+						// 锁死当前位置，防止倒车
+						extern float Location;
+						Location = 0;
+						Target_Location = 0;
+						
+                        // ★★★ 设定巡航速度 ★★★
+                        // 这里通过 PositionPID 间接控制，或者直接给 SpeedPID.Target
+                        // 建议先给一个较小的固定速度测试
+                        SpeedPID.Target = 30.0f; // 约 30cm/s ? 根据你的编码器换算
+                    }
+                }
             }
-            if(*yp > 2) *yp = 1;
-            if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
+            
+            // === 状态 2: 运行中 ===
+            if(*yp == 2) {
+                // KEY4: 停止/保存
+                if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
+                    
+                    if(nag_sub_mode == 0) {
+                        // 如果是录制模式，触发保存
+                        N.End_f = 1; 
+                        // 在 navigation.c 里会检测 End_f 并执行 flash_save_nag
+                        // 这里稍微延时等待一下保存 (简易处理)
+						tft180_show_string(0, 50, "   SAVING...           ");
+                        buzzer_on(1);
+						// 这里的延时既给了Flash写入时间，也充当了蜂鸣器的响声时长
+                        system_delay_ms(500); // 响 0.5 秒
+                        
+                        // ★★★ 新增：关闭蜂鸣器 ★★★
+                        buzzer_on(0);
+                    }
+                    
+                    // 统一停车逻辑
+                    balance_mode_active = 0;
+                    blue_mode_active = 0;
+                    N.Nag_SystemRun_Index = 0; // 退出惯导状态机
+                    motor_control(0,0);
+                    
+                    *yp = 1; // 回到准备界面
+                    key_clear_state(KEY_4);
+                }
+            }
+			
+			// 在准备界面按 KEY4 返回主菜单
+            if(*yp == 1 && key_get_state(KEY_4) == KEY_SHORT_PRESS) {
                 *yp = 0;
                 key_clear_state(KEY_4);
             }

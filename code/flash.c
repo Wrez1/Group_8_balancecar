@@ -15,14 +15,14 @@
 #define NAG_FLASH_SECTOR_START    (125) 
 #define NAG_MAGIC_WORD            (0xA5A5A5A5) // 用于标记"这里有有效数据"
 
+// 定义一个 PID 专用的魔术字 (随便写一个由十六进制组成的词)
+#define PID_MAGIC_WORD  0xDEADBEEF
 extern PID_t AnglePID;
 extern PID_t SpeedPID;
 extern PID_t TurnPID;
 extern float Mechanical_Zero_Pitch;
 
-// ----------------------------------------------------
-// 原有的 PID 保存/读取函数 (保持不变)
-// ----------------------------------------------------
+// 带校验的 PID 保存函数
 void flash_save(void)
 {
     if(flash_check(FLASH_SECTION_INDEX, FLASH_PAGE_INDEX)) 
@@ -31,50 +31,73 @@ void flash_save(void)
     }
     flash_buffer_clear(); 
 
-    // 保存AnglePID参数
-    for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
+    // === 1. 写入魔术字 (占用第0个位置) ===
+    flash_union_buffer[0].uint32_type = PID_MAGIC_WORD;
+
+    // 计算 PID 结构体占用的 float 数量
+    int pid_size = sizeof(PID_t) / sizeof(float);
+    int offset = 1; // 从第1个位置开始存数据 (第0个是魔术字)
+
+    // === 2. 保存 AnglePID ===
+    for (int i = 0; i < pid_size; i++)
     {
-        flash_union_buffer[i].float_type = ((float*)&AnglePID)[i];
+        flash_union_buffer[offset + i].float_type = ((float*)&AnglePID)[i];
     }
+    offset += pid_size;
     
-    // 保存SpeedPID参数
-    for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
+    // === 3. 保存 SpeedPID ===
+    for (int i = 0; i < pid_size; i++)
     {
-        flash_union_buffer[sizeof(PID_t)/sizeof(float) + i].float_type = ((float*)&SpeedPID)[i];
+        flash_union_buffer[offset + i].float_type = ((float*)&SpeedPID)[i];
     }
+    offset += pid_size;
     
-    // 保存TurnPID参数
-    for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
+    // === 4. 保存 TurnPID ===
+    for (int i = 0; i < pid_size; i++)
     {
-        flash_union_buffer[2*sizeof(PID_t)/sizeof(float) + i].float_type = ((float*)&TurnPID)[i];
+        flash_union_buffer[offset + i].float_type = ((float*)&TurnPID)[i];
     }
 
     flash_write_page_from_buffer(FLASH_SECTION_INDEX, FLASH_PAGE_INDEX);
 }
 
-void flash_load(void)
+// 带校验的读取函数 (返回值: 1=成功, 0=失败/为空)
+uint8_t flash_load(void)
 {
     flash_read_page_to_buffer(FLASH_SECTION_INDEX, FLASH_PAGE_INDEX);
 
-    // 加载AnglePID参数
-    for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
+    // === 1. 检查魔术字 ===
+    // 如果第0个位置不是我们存的 0xDEADBEEF，说明 Flash 是空的或者乱的
+    if (flash_union_buffer[0].uint32_type != PID_MAGIC_WORD)
     {
-        ((float*)&AnglePID)[i] = flash_union_buffer[i].float_type;
+        return 0; // 返回失败，告诉 main 函数不要用这些垃圾数据
     }
-    
-    // 加载SpeedPID参数
-    for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
+
+    int pid_size = sizeof(PID_t) / sizeof(float);
+    int offset = 1; // 从第1个位置开始读
+
+    // === 2. 加载 AnglePID ===
+    for (int i = 0; i < pid_size; i++)
     {
-        ((float*)&SpeedPID)[i] = flash_union_buffer[sizeof(PID_t)/sizeof(float) + i].float_type;
+        ((float*)&AnglePID)[i] = flash_union_buffer[offset + i].float_type;
     }
+    offset += pid_size;
     
-    // 加载TurnPID参数
-    for (int i = 0; i < sizeof(PID_t)/sizeof(float); i++)
+    // === 3. 加载 SpeedPID ===
+    for (int i = 0; i < pid_size; i++)
     {
-        ((float*)&TurnPID)[i] = flash_union_buffer[2*sizeof(PID_t)/sizeof(float) + i].float_type;
+        ((float*)&SpeedPID)[i] = flash_union_buffer[offset + i].float_type;
+    }
+    offset += pid_size;
+    
+    // === 4. 加载 TurnPID ===
+    for (int i = 0; i < pid_size; i++)
+    {
+        ((float*)&TurnPID)[i] = flash_union_buffer[offset + i].float_type;
     }
 
     flash_buffer_clear();
+    return 1; // 成功
 }
 
 // 保存机械中值

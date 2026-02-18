@@ -17,8 +17,7 @@
 #define MaxSize 2000    
 
 // 2. 里程计阈值
-// MG513电机 (30:1减速) -> 2cm 约 153 脉冲
-#define Nag_Set_mileage 153 
+#define Nag_Set_mileage 647 
 
 // 3. 传感器绑定
 #define Nag_Yaw Car_Attitude.Yaw // 使用你调好的无漂移 Yaw

@@ -20,6 +20,8 @@ extern uint8_t blue_mode_active;
 // 速度环分频计数器
 static uint8_t Speed_Loop_Count = 0;
 
+//volatile uint32_t ISR_Time_us = 0;
+
 //static uint8_t Control_Divider = 0;
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -28,6 +30,8 @@ static uint8_t Speed_Loop_Count = 0;
 //-------------------------------------------------------------------------------------------------------------------
 void TIM1_UP_IRQHandler (void)
 {
+//	uint32_t start_tick = SysTick->VAL;
+	
 	// 一句话搞定所有读取和解算，传入 dt = 0.002 (2ms)
 	IMU_Get_Data_Task(0.002f);
     
@@ -45,57 +49,109 @@ void TIM1_UP_IRQHandler (void)
         return; 
     }
 	
-	// === 2. 速度环与惯导 (20ms 分频) ===
-    Speed_Loop_Count++;
-//	if (Control_Divider >= 2) 
-//    {
-//        Control_Divider = 0; // 清零，等待下一次
-    if(Speed_Loop_Count >= 10) // 5ms * 4 = 20ms
+	// =========================================================
+    // ★★★ 修改点：将惯导逻辑提速到 2ms ★★★
+    // =========================================================
+    // 无论是录制(Save)还是复现(GPS)，都是简单的内存操作，不耗时。
+    // 放在这里可以保证 2ms 更新一次位置和目标 Yaw，响应最快。
+    if(N.Nag_SystemRun_Index != 0)
     {
-        Speed_Loop_Count = 0;
-		
-		// ★★★ 在这里插入模式选择逻辑 ★★★
-        if (Control_Mode == 1) 
-        {
-            // ---【模式 1：位置闭环 / 惯导 / 定点平衡】---           // 1. 更新当前里程 Location
-            Position_PIDControl();    // 2. 运行位置 PID
-            
-            // 3. 强行接管速度环目标
-            // 位置环算出该跑多快，速度环就得听它的
-            SpeedPID.Target = PositionPID.Out; 
-        }
-        // 2.1 运行速度环 (更新 SpeedLeft/Right)
-        Speed_PIDControl(); 
+        // 这里的 SpeedLeft 是 2ms 内的脉冲数还是速度？
+        // 假设 encoder_Get_Speed 计算的是最近一段时间的速度。
+        // 为了积分准确，最好使用原始脉冲差值。
+        // 但如果没有，用速度积分也可以： Mileage += Speed * dt
+        Total_Encoder_L = (int64_t)SpeedLeft; 
+        Total_Encoder_R = (int64_t)SpeedRight;
         
-        // 2.2 运行惯导逻辑
-        if(N.Nag_SystemRun_Index != 0)
-        {
-            // 累加本次的脉冲数 (SpeedLeft已经是这段时间的脉冲了)
-            Total_Encoder_L = (int64_t)SpeedLeft; 
-            Total_Encoder_R = (int64_t)SpeedRight;
-            
-            Nag_System(); // 执行惯导核心
-        }
-        else
-        {
-            Total_Encoder_L = 0;
-            Total_Encoder_R = 0;
-        }
+        Nag_System(); // 执行惯导核心 (2ms 一次)
+		
+		if(N.Nag_Stop_f == 1)
+            {
+                SpeedPID.Target = 0.0f;    // 1. 速度归零 (刹车)
+                Turn_Target = 0.0f;        // 2. 转向归零 (回正)
+                N.Nag_SystemRun_Index = 0; // 3. 退出惯导状态机
+                
+                // (可选) 如果你想让车跑完直接“断电倒下”，取消注释下面这行
+                // balance_mode_active = 0; 
+                
+                // (可选) 蜂鸣器提示跑完了
+                // buzzer_on(1); 
+            }
+    }
+    else
+    {
+        Total_Encoder_L = 0;
+        Total_Encoder_R = 0;
     }
     
-    // === 3. 直立与转向控制 (5ms) ===
+	// =========================================================
+    // 4. 速度环 (保持 20ms 低频执行)
+    // =========================================================
+    Speed_Loop_Count++;
+    if(Speed_Loop_Count >= 10) // 2ms * 10 = 20ms
+    {
+        Speed_Loop_Count = 0;
+        
+        if (Control_Mode == 1) 
+        {
+            Position_PIDControl();    
+            SpeedPID.Target = PositionPID.Out; 
+        }
+        
+        Speed_PIDControl(); 
+        // ★ 注意：原来的惯导逻辑从这里删掉了，移到了上面 ★
+    }
+	
+    // === 5. 直立与转向控制 (2ms) ===
     // 如果是惯导复现模式，把 N.Final_Out 注入给转向环
     if(N.Nag_SystemRun_Index == 3) {
-         // 将角度误差转换为转向差速 (系数 2.0 可调)
-         Turn_Target = N.Final_Out * 2.0f; 
-    } else {
-         // 正常模式 (比如遥控或循迹)
-         TurnPID.Target = TurnPID.Target; 
+         // 将角度误差转换为转向差速 (系数 60.0 可调)
+         Turn_Target = N.Final_Out * 60.0f; 
     }
-	Turn_PIDControl();
-	Angle_Gyro_Cascade_Control();
+	// ★★★ 新增：只在平衡模式下才执行控制 ★★★
+    if (balance_mode_active == 1)
+    {
+        // 只有要平衡的时候，才算 PID，才给电机通电
+        if(N.Nag_SystemRun_Index == 3) {
+             Turn_Target = N.Final_Out * 2.0f; 
+        } 
+        
+        Turn_PIDControl();            
+        Angle_Gyro_Cascade_Control(); 
+    }
+    else
+    {
+        // ★★★ 录制模式 (balance=0) 下，强制关电机 ★★★
+        // 这样你推车的时候，电机就是断电状态，非常顺滑，没有任何阻力
+        motor_control(0, 0);
+        
+        // 顺便清空 PID 积分，防止它在后台“偷偷攒劲”
+        TurnPID.ErrorInt = 0;
+        TurnPID.Out = 0;
+	}
+//	// 2. 再次读寄存器
+//    uint32_t end_tick = SysTick->VAL;
+
+//    // 3. 计算耗时
+//    // SysTick 是倒计数的 (从 LOAD 值减到 0)
+//    // MM32F327 主频通常是 120MHz (1us = 120 ticks)
+//    uint32_t delta_ticks;
+//    
+//    // 因为是倒数，所以 Start 通常大于 End
+//    if (start_tick >= end_tick)
+//    {
+//        delta_ticks = start_tick - end_tick;
+//    }
+//    else
+//    {
+//        // 处理溢出重装载 (Load Value + Start - End)
+//        delta_ticks = (SysTick->LOAD - end_tick) + start_tick;
+//    }
+
+//    // 转换为微秒 (除以 120)
+//    // 如果算出来的值明显不对（偏大），试试除以 15 (假设 SysTick 是 1/8 分频)
+//    ISR_Time_us = delta_ticks / 120;
 	
-//}
 	TIM1->SR &= ~TIM1->SR;
 }
 
