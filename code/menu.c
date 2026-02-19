@@ -559,7 +559,7 @@ void menu(uint8* xp, uint8* yp,
                         // ★★★ 设定巡航速度 ★★★
                         // 这里通过 PositionPID 间接控制，或者直接给 SpeedPID.Target
                         // 建议先给一个较小的固定速度测试
-                        SpeedPID.Target = 30.0f; // 约 30cm/s ? 根据你的编码器换算
+                        SpeedPID.Target = 10.0f; // 约 30cm/s ? 根据你的编码器换算
                     }
                 }
             }
@@ -575,12 +575,18 @@ void menu(uint8* xp, uint8* yp,
                         // 在 navigation.c 里会检测 End_f 并执行 flash_save_nag
                         // 这里稍微延时等待一下保存 (简易处理)
 						tft180_show_string(0, 50, "   SAVING...           ");
-                        buzzer_on(1);
-						// 这里的延时既给了Flash写入时间，也充当了蜂鸣器的响声时长
-                        system_delay_ms(500); // 响 0.5 秒
-                        
-                        // ★★★ 新增：关闭蜂鸣器 ★★★
-                        buzzer_on(0);
+						
+						if(N.Save_index > 0) {
+                            flash_save_nag(); 
+                        }
+						
+//                        buzzer_on(1);
+//						// 这里的延时既给了Flash写入时间，也充当了蜂鸣器的响声时长
+//                        system_delay_ms(500); // 响 0.5 秒
+//                        
+//                        // ★★★ 新增：关闭蜂鸣器 ★★★
+//                        buzzer_on(0);
+						system_delay_ms(300);
                     }
                     
                     // 统一停车逻辑

@@ -143,6 +143,8 @@ int main(void)
         system_delay_ms(200); 
         buzzer_on(0); // 响一声提示初始化完成
     }
+	
+	Init_Nag();
     // 4. 开启控制中断
     pit_ms_init(TIM1_PIT, 2); // 2ms 中断
 	tft180_clear();

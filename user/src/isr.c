@@ -5,11 +5,13 @@
 #include "navigation.h"
 #include "motor.h"
 #include "encoder.h"
+#include "math.h"
 
 // 惯导用的累积里程
 int64 Total_Encoder_L = 0;
 int64 Total_Encoder_R = 0;
-
+static float Last_SpeedLeft = 0;
+static float Last_SpeedRight = 0;
 // 外部引用
 extern PID_t SpeedPID; // 速度环会更新 SpeedLeft/Right
 extern float SpeedLeft, SpeedRight;
@@ -56,10 +58,31 @@ void TIM1_UP_IRQHandler (void)
     // 放在这里可以保证 2ms 更新一次位置和目标 Yaw，响应最快。
     if(N.Nag_SystemRun_Index != 0)
     {
-        // 这里的 SpeedLeft 是 2ms 内的脉冲数还是速度？
-        // 假设 encoder_Get_Speed 计算的是最近一段时间的速度。
-        // 为了积分准确，最好使用原始脉冲差值。
-        // 但如果没有，用速度积分也可以： Mileage += Speed * dt
+        
+		// =========================================================
+        // ★ 优化一：打滑检测与轮速滤波 (Slip Check)
+        // =========================================================
+        float slip_threshold = 20.0f; // ★ 阈值：2ms内允许的最大速度变化量(需实测调整)
+        
+        // 1. 计算当前轮速与上一次的差值 (即轮子加速度)
+        float delta_L = SpeedLeft - Last_SpeedLeft;
+        float delta_R = SpeedRight - Last_SpeedRight;
+        
+        // 2. 左轮打滑拦截
+        if (fabs(delta_L) > slip_threshold) {
+            // 如果加速度异常，限制其最大输出，认定多出来的部分是空转
+            SpeedLeft = Last_SpeedLeft + (delta_L > 0 ? slip_threshold : -slip_threshold);
+        }
+        
+        // 3. 右轮打滑拦截
+        if (fabs(delta_R) > slip_threshold) {
+            SpeedRight = Last_SpeedRight + (delta_R > 0 ? slip_threshold : -slip_threshold);
+        }
+        
+        // 4. 记录本次速度供下次比较
+        Last_SpeedLeft = SpeedLeft;
+        Last_SpeedRight = SpeedRight;
+		
         Total_Encoder_L = (int64_t)SpeedLeft; 
         Total_Encoder_R = (int64_t)SpeedRight;
         
@@ -104,16 +127,16 @@ void TIM1_UP_IRQHandler (void)
 	
     // === 5. 直立与转向控制 (2ms) ===
     // 如果是惯导复现模式，把 N.Final_Out 注入给转向环
-    if(N.Nag_SystemRun_Index == 3) {
-         // 将角度误差转换为转向差速 (系数 60.0 可调)
-         Turn_Target = N.Final_Out * 60.0f; 
-    }
+//    if(N.Nag_SystemRun_Index == 3) {
+//         // 将角度误差转换为转向差速 (系数 60.0 可调)
+//         Turn_Target = N.Final_Out * 60.0f; 
+//    }
 	// ★★★ 新增：只在平衡模式下才执行控制 ★★★
     if (balance_mode_active == 1)
     {
         // 只有要平衡的时候，才算 PID，才给电机通电
         if(N.Nag_SystemRun_Index == 3) {
-             Turn_Target = N.Final_Out * 2.0f; 
+             Turn_Target = N.Final_Out * 8.0f; 
         } 
         
         Turn_PIDControl();            

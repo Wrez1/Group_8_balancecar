@@ -1,7 +1,7 @@
 #include "flash.h"
 #include "pid.h"
 #include "navigation.h" // ★ 必须引入，为了访问 N 和 Nav_Record_Buffer
-
+#include "buzzer.h"
 // === PID 参数存储区 (原配置) ===
 #define FLASH_SECTION_INDEX       (127)
 #define FLASH_PAGE_INDEX          (3)
@@ -165,10 +165,16 @@ void flash_load_mech_zero(void)
 
 // 保存路径到 Flash (跨页写入)
 void flash_save_nag(void)
-{
+{			
+	for(int s = 0; s < 2; s++) {
+        for(int p = 0; p < 4; p++) {
+            flash_erase_page(NAG_FLASH_SECTOR_START + s, p);
+        }
+    }
+	
     uint32_t sector = NAG_FLASH_SECTOR_START;
     uint32_t page = 0;
-    
+	
     // === 1. 准备第一页 (包含文件头) ===
     flash_buffer_clear();
     
@@ -188,6 +194,7 @@ void flash_save_nag(void)
         count++;
     }
     
+	
     // 写入第一页 (注意: flash_write_page_from_buffer 内部会自动擦除)
     flash_write_page_from_buffer(sector, page);
     page++; // 准备写下一页
@@ -214,6 +221,26 @@ void flash_save_nag(void)
         flash_write_page_from_buffer(sector, page);
         page++;
     }
+	
+	// ==========================================================
+    // 阶段三：立即自检 (Verify)
+    // 存完马上读回来检查，看看是不是真的存进去了
+    // ==========================================================
+    flash_read_page_to_buffer(NAG_FLASH_SECTOR_START, 0);
+    
+    // 检查魔术字
+    if(flash_union_buffer[0].uint32_type == NAG_MAGIC_WORD) {
+        // 校验成功！响两声短音
+        buzzer_on(1); system_delay_ms(100); buzzer_on(0);
+        system_delay_ms(100);
+        buzzer_on(1); system_delay_ms(100); buzzer_on(0);
+    } else {
+        // 校验失败！(说明Flash坏了或者写保护)，响三声长音报警
+        for(int k=0; k<3; k++){
+            buzzer_on(1); system_delay_ms(500); buzzer_on(0); system_delay_ms(200);
+        }
+    }
+	
 }
 
 // 从 Flash 读取路径 (跨页读取)
