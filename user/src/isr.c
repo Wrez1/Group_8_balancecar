@@ -8,8 +8,8 @@
 #include "math.h"
 
 // 惯导用的累积里程
-int64 Total_Encoder_L = 0;
-int64 Total_Encoder_R = 0;
+float Total_Encoder_L = 0;
+float Total_Encoder_R = 0;
 static float Last_SpeedLeft = 0;
 static float Last_SpeedRight = 0;
 // 外部引用
@@ -62,29 +62,30 @@ void TIM1_UP_IRQHandler (void)
 		// =========================================================
         // ★ 优化一：打滑检测与轮速滤波 (Slip Check)
         // =========================================================
-        float slip_threshold = 20.0f; // ★ 阈值：2ms内允许的最大速度变化量(需实测调整)
-        
-        // 1. 计算当前轮速与上一次的差值 (即轮子加速度)
+       // 1. 获取最真实的物理增量
         float delta_L = SpeedLeft - Last_SpeedLeft;
         float delta_R = SpeedRight - Last_SpeedRight;
         
-        // 2. 左轮打滑拦截
+        // 2. 创建两个独立的“导航专用速度”变量
+        float nav_SpeedLeft = SpeedLeft;
+        float nav_SpeedRight = SpeedRight;
+        
+        // ★ 我们稍微放宽一点阈值，30.0f 足以防住真正的起步打滑，又不会误伤弯道
+        float slip_threshold = 30.0f; 
+        
+        // 3. 只有 导航专用速度 参与打滑限幅处理！
         if (fabs(delta_L) > slip_threshold) {
-            // 如果加速度异常，限制其最大输出，认定多出来的部分是空转
-            SpeedLeft = Last_SpeedLeft + (delta_L > 0 ? slip_threshold : -slip_threshold);
+            nav_SpeedLeft = Last_SpeedLeft + (delta_L > 0 ? slip_threshold : -slip_threshold);
         }
-        
-        // 3. 右轮打滑拦截
         if (fabs(delta_R) > slip_threshold) {
-            SpeedRight = Last_SpeedRight + (delta_R > 0 ? slip_threshold : -slip_threshold);
+            nav_SpeedRight = Last_SpeedRight + (delta_R > 0 ? slip_threshold : -slip_threshold);
         }
         
-        // 4. 记录本次速度供下次比较
-        Last_SpeedLeft = SpeedLeft;
-        Last_SpeedRight = SpeedRight;
+        Last_SpeedLeft = nav_SpeedLeft;
+        Last_SpeedRight = nav_SpeedRight;
 		
-        Total_Encoder_L = (int64_t)SpeedLeft; 
-        Total_Encoder_R = (int64_t)SpeedRight;
+        Total_Encoder_L = SpeedLeft;  // 不再强转，保留 0.82、1.15 这种精细位移
+        Total_Encoder_R = SpeedRight;
         
         Nag_System(); // 执行惯导核心 (2ms 一次)
 		

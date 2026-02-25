@@ -175,8 +175,8 @@ void IMU_Get_Data_Task(float dt)
     // ==============================================================
     
     // 通道A：导航专用 (轻滤波，保真实，低延迟)
-    // Alpha = 0.9 表示 90% 信新数据，几乎无延迟
-    float Alpha_Nav = 0.9f;
+    // Alpha = 0.95 表示 95% 信新数据，几乎无延迟
+    float Alpha_Nav = 0.95f;
     Gyro_Z_For_Nav = gz_deg * Alpha_Nav + Last_Gyro_Z_Nav * (1.0f - Alpha_Nav);
     Last_Gyro_Z_Nav = Gyro_Z_For_Nav;
     

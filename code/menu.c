@@ -210,6 +210,12 @@ void showplace4(uint8 x, uint8 sub_mode){
             break;
             
         case 2: // === 运行界面 (Running) ===
+		{	
+		    static uint8_t refresh_cnt = 0;
+            refresh_cnt++;
+            if(refresh_cnt < 10) break; // 如果不到 10 次，直接跳出，不去画屏幕！
+            refresh_cnt = 0;            // 到了 10 次，清零并往下执行画屏
+		
             tft180_show_string(0, 10, "    MODE 4: RUNNING    ");
             tft180_show_string(0, 30, "--------------------");
             
@@ -218,25 +224,40 @@ void showplace4(uint8 x, uint8 sub_mode){
             else 
                  tft180_show_string(0, 50, "   Status: REPLAYING   ");
             
-            // ★★★ 擦除准备界面的残影 ★★★
-            tft180_show_string(0, 60, "                       ");
+            // ★★★ 升级 1：显示实时的 X 和 Y 坐标 ★★★
+            // 假设横向坐标较短，我们把 X 和 Y 挤在同一行
+            tft180_show_string(0, 60, "X:        Y:           ");
+            tft180_show_float(15, 60, N.Current_X, 4, 1); // 预留4位整数，1位小数
+            tft180_show_float(85, 60, N.Current_Y, 4, 1);
             
             // 显示当前 Yaw
             tft180_show_string(0, 70, "Yaw:                   ");
-            tft180_show_float(40, 70, Car_Attitude.Yaw, 3, 1);
+            tft180_show_float(35, 70, Car_Attitude.Yaw, 3, 1);
             
-            // ★★★ 擦除准备界面的残影 ★★★
-            tft180_show_string(0, 80, "                       ");
-			
-			// 显示里程/进度
-			tft180_show_string(0, 90, "Index: ");
-			tft180_show_int(50, 90, N.Save_index, 4);
+            // ★★★ 升级 2：智能显示进度 ★★★
+            if(sub_mode == 0) {
+                // 录制模式：只显示存了多少个点
+                tft180_show_string(0, 80, "Saved Pts:             ");
+                tft180_show_int(85, 80, N.Save_index, 4);
+                tft180_show_string(0, 90, "                       "); // 清空下一行
+            } else {
+                // 复现模式：显示进度 (Run_index / Save_index)
+                tft180_show_string(0, 80, "Run/Total:             ");
+                tft180_show_int(85, 80, N.Run_index, 4);
+                tft180_show_string(115, 80, "/");
+                tft180_show_int(125, 80, N.Save_index, 4);
+                
+                // (可选)复现模式还可以顺便显示当前的纯跟踪计算曲率输出
+                tft180_show_string(0, 90, "Curv Out:              ");
+                tft180_show_float(80, 90, N.Final_Out, 3, 2);
+            }
                  
             // ★★★ 擦除准备界面的残影 (Line 100 是 KEY1/2 Select) ★★★
             tft180_show_string(0, 100,"                       ");
             
             tft180_show_string(0, 110," KEY4: STOP/SAVE       ");
             break;
+		}	
     }
 }
 
@@ -528,6 +549,15 @@ void menu(uint8* xp, uint8* yp,
                         N.Mileage_All = 0;
                         N.End_f = 0;
                         
+						N.Nag_Stop_f = 0; 
+                    
+                        // ★★★ 核心修复 2：彻底清空内存中残留的老轨迹，保证新录入干净 ★★★
+                        memset(Nav_Record_Buffer, 0, sizeof(Nav_Record_Buffer));
+						
+						// ★★★ 新增：重置世界原点 ★★★
+                        N.Current_X = 0;
+                        N.Current_Y = 0;
+						
                         // 确保电机无力 (手推模式)
                         SpeedPID.Target = 0;
                         Turn_Target = 0;
@@ -545,6 +575,10 @@ void menu(uint8* xp, uint8* yp,
                         N.Mileage_All = 0;
                         N.Nag_Stop_f = 0;
                         
+						// ★★★ 新增：重置世界原点 ★★★
+                        N.Current_X = 0;
+                        N.Current_Y = 0;
+						
                         // PID 重置
                         PID_Init(&SpeedPID);
                         PID_Init(&AnglePID);
@@ -559,7 +593,7 @@ void menu(uint8* xp, uint8* yp,
                         // ★★★ 设定巡航速度 ★★★
                         // 这里通过 PositionPID 间接控制，或者直接给 SpeedPID.Target
                         // 建议先给一个较小的固定速度测试
-                        SpeedPID.Target = 10.0f; // 约 30cm/s ? 根据你的编码器换算
+                        SpeedPID.Target = 15.0f; // 约 30cm/s ? 根据你的编码器换算
                     }
                 }
             }

@@ -1,6 +1,6 @@
 #include "flash.h"
 #include "pid.h"
-#include "navigation.h" // ★ 必须引入，为了访问 N 和 Nav_Record_Buffer
+#include "navigation.h" //必须引入，为了访问 N 和 Nav_Record_Buffer
 #include "buzzer.h"
 // === PID 参数存储区 (原配置) ===
 #define FLASH_SECTION_INDEX       (127)
@@ -11,9 +11,10 @@
 #define MECH_ZERO_PAGE_INDEX      (2)    // 使用第2页存储机械中值
 
 // === 惯导数据存储区 (新配置) ===
-// 使用 Sector 125 和 126 (共8KB空间)
-#define NAG_FLASH_SECTOR_START    (125) 
+// 使用 Sector 123 到 126 (共8KB空间)
+#define NAG_FLASH_SECTOR_START    (117) 
 #define NAG_MAGIC_WORD            (0xA5A5A5A5) // 用于标记"这里有有效数据"
+#define SECTOR_COUNT              (10) // 占用扇区数
 
 // 定义一个 PID 专用的魔术字 (随便写一个由十六进制组成的词)
 #define PID_MAGIC_WORD  0xDEADBEEF
@@ -165,8 +166,10 @@ void flash_load_mech_zero(void)
 
 // 保存路径到 Flash (跨页写入)
 void flash_save_nag(void)
-{			
-	for(int s = 0; s < 2; s++) {
+{		
+    uint32_t start_sector = NAG_FLASH_SECTOR_START;
+
+	for(int s = 0; s < SECTOR_COUNT; s++) {
         for(int p = 0; p < 4; p++) {
             flash_erase_page(NAG_FLASH_SECTOR_START + s, p);
         }
@@ -184,13 +187,18 @@ void flash_save_nag(void)
     
     // 写入第一批数据
     int count = 0;
-    int items_per_page = FLASH_DATA_BUFFER_SIZE; // 256个uint32
+    //int items_per_page = FLASH_DATA_BUFFER_SIZE; // 256个uint32
     // 第一页前面占用了2个位置，所以还能存 254 个数据
-    int first_page_capacity = items_per_page - 2;
+    int first_page_capacity = 127;
     
+	int offset = 2; // 从第2个格开始填
+	
     for(int i=0; i < first_page_capacity && i < N.Save_index; i++)
     {
-        flash_union_buffer[2+i].int32_type = Nav_Record_Buffer[i];
+        // ★ 巧妙拆分：把结构体里的 x 和 y 分别存入
+        flash_union_buffer[offset].float_type = Nav_Record_Buffer[count].x;
+        flash_union_buffer[offset+1].float_type = Nav_Record_Buffer[count].y;
+        offset += 2;
         count++;
     }
     
@@ -209,11 +217,16 @@ void flash_save_nag(void)
         }
         
         flash_buffer_clear();
-        
+        offset = 0;
+		
         // 填满这一页缓冲
-        for(int i=0; i < items_per_page && count < N.Save_index; i++)
+		// ★ 满页容量写死 128
+        int normal_page_capacity = 128;
+        for(int i=0; i < normal_page_capacity && count < N.Save_index; i++)
         {
-            flash_union_buffer[i].int32_type = Nav_Record_Buffer[count];
+            flash_union_buffer[offset].float_type = Nav_Record_Buffer[count].x;
+            flash_union_buffer[offset+1].float_type = Nav_Record_Buffer[count].y;
+            offset += 2;
             count++;
         }
         
@@ -265,12 +278,15 @@ uint8_t flash_load_nag(void)
     
     // 读取第一批数据
     int count = 0;
-    int items_per_page = FLASH_DATA_BUFFER_SIZE;
-    int first_page_capacity = items_per_page - 2;
-    
+    //int items_per_page = FLASH_DATA_BUFFER_SIZE;
+    int first_page_capacity = 127;
+    int offset = 2;
+	
     for(int i=0; i < first_page_capacity && count < N.Save_index; i++)
     {
-        Nav_Record_Buffer[count] = flash_union_buffer[2+i].int32_type;
+        Nav_Record_Buffer[count].x = flash_union_buffer[offset].float_type;
+        Nav_Record_Buffer[count].y = flash_union_buffer[offset+1].float_type;
+        offset += 2;
         count++;
     }
     
@@ -285,10 +301,14 @@ uint8_t flash_load_nag(void)
         }
         
         flash_read_page_to_buffer(sector, page);
-        
-        for(int i=0; i < items_per_page && count < N.Save_index; i++)
+        offset = 0;
+		
+		int normal_page_capacity = 128;
+        for(int i=0; i < normal_page_capacity && count < N.Save_index; i++)
         {
-            Nav_Record_Buffer[count] = flash_union_buffer[i].int32_type;
+            Nav_Record_Buffer[count].x = flash_union_buffer[offset].float_type;
+            Nav_Record_Buffer[count].y = flash_union_buffer[offset+1].float_type;
+            offset += 2;
             count++;
         }
         page++;

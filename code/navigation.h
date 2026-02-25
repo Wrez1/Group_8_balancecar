@@ -12,9 +12,9 @@
 // ================= 用户设置区域 =================
 
 // 1. 存储空间定义
-// 定义 RAM 数组大小 (2000个点 * 4字节 = 8KB)
-// 刚好能填满 2 个 Flash 扇区 (Sector 125, 126)
-#define MaxSize 2000    
+// 1cm = 1点。5000个点 = 50米距离。
+// 5000个点 * 8字节 = 40KB RAM空间 (单片机完全够用)
+#define MaxSize 5000    
 
 // 2. 里程计阈值
 #define Nag_Set_mileage 647 
@@ -24,18 +24,27 @@
 
 // 4. 编码器绑定
 // 绑定到 isr.c 里定义的全局累积量
-extern int64_t Total_Encoder_L;
-extern int64_t Total_Encoder_R;
+extern float Total_Encoder_L;
+extern float Total_Encoder_R;
 #define L_Mileage Total_Encoder_L
 #define R_Mileage Total_Encoder_R
 
 // ===============================================
 
+// ★ 核心升级：定义坐标点结构体
+typedef struct {
+    float x;
+    float y;
+} PathPoint;
+
 // 核心结构体 (删除了所有无关的 Flash 翻页变量)
 typedef struct{
        float Final_Out;     // [核心] 输出给转向环的偏差值
        float Mileage_All;   // 当前累积里程 (用于判断是否走过 2cm)
-       float Angle_Run;     // 当前复现的目标角度
+       // ★ 核心升级：增加小车的实时物理坐标
+       float Current_X;
+       float Current_Y;
+	
        uint8 Nag_Stop_f;    // 结束标志 (1=跑完了)
        
        uint16 Run_index;    // 复现进度 (当前跑到第几个点)
@@ -47,8 +56,8 @@ typedef struct{
 
 extern Nag N;
 
-// 核心大数组 (所有路径数据都在这)
-extern int32_t Nav_Record_Buffer[MaxSize];
+// ★ 核心升级：大数组现在存的是包含(X,Y)的结构体
+extern PathPoint Nav_Record_Buffer[MaxSize];
 
 // 函数声明
 // 只保留这就够了，其他的 Run_Nag_Save 等函数只在 .c 内部使用，不需要暴露

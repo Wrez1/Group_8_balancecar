@@ -94,14 +94,14 @@ extern PID_t SpeedPID;
 extern float SpeedLeft, SpeedRight;
 // 引用转向目标，用于特殊处理原地旋转
 extern float Turn_Target;
-
+extern uint8_t blue_mode_active; // ★ 引入蓝牙标志位
 void Speed_PIDControl(void)
 {
     // 1. 获取真实速度
     float CurrentAveSpeed = (SpeedLeft + SpeedRight) / 2.0f;
     
     // 2. 原地旋转时的特殊处理
-    if (fabsf(Turn_Target) > 40.0f && fabsf(SpeedPID.Target) < 20.0f)
+    if (blue_mode_active == 1 && fabsf(Turn_Target) > 40.0f && fabsf(SpeedPID.Target) < 20.0f)
     {
         // 欺骗 PID
         SpeedPID.Actual = SpeedPID.Target;
