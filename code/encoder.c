@@ -4,6 +4,10 @@
 float SpeedLeft = 0.0f;
 float SpeedRight = 0.0f;
 
+// ★ 新增：专门给惯导积分用的“无延迟”原始脉冲
+float Raw_SpeedLeft = 0.0f; 
+float Raw_SpeedRight = 0.0f;
+
 // === 2. 定义内部静态变量 (替代原来的 Temp) ===
 static float SpeedLeft_Prev = 0.0f;
 static float SpeedRight_Prev = 0.0f;
@@ -41,6 +45,10 @@ void encoder_Get_Speed(void)
     
     // 右轮：Get_Count2 是 +encoder，所以这里保持正号
     float current_R =  (float)raw_R;  
+	
+	// ★ 核心修复 1：将最原始的数据直接暴露给导航系统
+    Raw_SpeedLeft = current_L;
+    Raw_SpeedRight = current_R;
     
     // 4. 低通滤波 (Int 转 Float 并平滑)
     SpeedLeft  = current_L * Speed_Smooth + SpeedLeft_Prev  * (1.0f - Speed_Smooth);

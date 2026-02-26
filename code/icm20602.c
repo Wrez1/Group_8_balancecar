@@ -31,6 +31,9 @@ static float Last_Gyro_Z_Ctrl = 0.0f; // 控制用 (重滤波)
 // 定义全局变量 (记得去 .h 声明一下)
 float Gyro_Z_For_Nav = 0.0f;  // ★ 专门给积分 Yaw 用的
 float Gyro_Z_For_Ctrl = 0.0f; // ★ 专门给 PID 用的
+
+// ★ 新增：专门用于梯形积分的历史变量
+static float Last_Unfiltered_Gyro_Z = 0.0f;
 // ---------------------------------------------------------
 // IMU 初始化
 // ---------------------------------------------------------
@@ -175,10 +178,7 @@ void IMU_Get_Data_Task(float dt)
     // ==============================================================
     
     // 通道A：导航专用 (轻滤波，保真实，低延迟)
-    // Alpha = 0.95 表示 95% 信新数据，几乎无延迟
-    float Alpha_Nav = 0.95f;
-    Gyro_Z_For_Nav = gz_deg * Alpha_Nav + Last_Gyro_Z_Nav * (1.0f - Alpha_Nav);
-    Last_Gyro_Z_Nav = Gyro_Z_For_Nav;
+    Gyro_Z_For_Nav = gz_deg;
     
     // 通道B：控制专用 (重滤波，去噪声，高Kp)
     // Alpha = 0.2 表示只信 20% 新数据，极度平滑，适合 PID
@@ -209,11 +209,19 @@ void IMU_Get_Data_Task(float dt)
 //    Real_Gyro_Y = gy_deg;
     //Real_Gyro_Z = gz_deg;
 	
-	// ★★★ 4. 纯积分计算 Yaw (必须用滤过波的 gz_deg) ★★★
+	// ==============================================================
+    // ★★★ 4. 高精度梯形积分计算 Yaw ★★★
     // ==============================================================
+    // 【参数】陀螺仪比例因子。用于修复硬件转一圈但读数不是360度的问题。
+    // 如果转一圈 Yaw 读数小于 360，调大此值(如 1.005)；如果大于 360，调小(如 0.995)
+    float Gyro_Scale_Factor = 1.002f; 
+    
+    // 梯形积分公式：(本次值 + 上次值) / 2 * dt (面积法，精度比矩形积分高一倍)
+    float integration_gyro = (Gyro_Z_For_Nav + Last_Unfiltered_Gyro_Z) * 0.5f;
+    Last_Unfiltered_Gyro_Z = Gyro_Z_For_Nav; // 记录本次历史值
+    
     // dt = 0.002s (由 isr.c 传入)
-    // 符号说明：如果发现转左 Yaw 变小，就改成 -=
-    Car_Attitude.Yaw += Gyro_Z_For_Nav * dt;
+    Car_Attitude.Yaw += integration_gyro * dt * Gyro_Scale_Factor;
 	
     float gx = gx_deg * 0.0174533f; // 转弧度
     float gy = gy_deg * 0.0174533f;

@@ -59,33 +59,60 @@ void TIM1_UP_IRQHandler (void)
     if(N.Nag_SystemRun_Index != 0)
     {
         
-		// =========================================================
-        // ★ 优化一：打滑检测与轮速滤波 (Slip Check)
+		// 声明静态变量，用于记录复现模式下的历史速度 (计算加速度用)
+        static float Replay_Last_L = 0.0f;
+        static float Replay_Last_R = 0.0f;
+
         // =========================================================
-       // 1. 获取最真实的物理增量
-        float delta_L = SpeedLeft - Last_SpeedLeft;
-        float delta_R = SpeedRight - Last_SpeedRight;
-        
-        // 2. 创建两个独立的“导航专用速度”变量
-        float nav_SpeedLeft = SpeedLeft;
-        float nav_SpeedRight = SpeedRight;
-        
-        // ★ 我们稍微放宽一点阈值，30.0f 足以防住真正的起步打滑，又不会误伤弯道
-        float slip_threshold = 30.0f; 
-        
-        // 3. 只有 导航专用速度 参与打滑限幅处理！
-        if (fabs(delta_L) > slip_threshold) {
-            nav_SpeedLeft = Last_SpeedLeft + (delta_L > 0 ? slip_threshold : -slip_threshold);
+        // 【模式 1：录制模式 (Teach)】- 绝对纯净，0 延迟，0 限幅
+        // =========================================================
+        if(N.Nag_SystemRun_Index == 1) 
+        {
+            // 录制时：完全信任真实脉冲，不漏掉任何一个微小的转角
+            Total_Encoder_L = Raw_SpeedLeft;
+            Total_Encoder_R = Raw_SpeedRight;
+            
+            // 实时同步历史值，防止未来切入复现模式瞬间产生巨大跳变
+            Replay_Last_L = Raw_SpeedLeft;
+            Replay_Last_R = Raw_SpeedRight;
         }
-        if (fabs(delta_R) > slip_threshold) {
-            nav_SpeedRight = Last_SpeedRight + (delta_R > 0 ? slip_threshold : -slip_threshold);
+        // =========================================================
+        // 【模式 3：复现模式 (Replay)】- 开启双重防打滑保护
+        // =========================================================
+        else if(N.Nag_SystemRun_Index == 3)
+        {
+            float nav_L = Raw_SpeedLeft;
+            float nav_R = Raw_SpeedRight;
+            
+            // --- 第一重保护：加速度限幅 (防起步/急刹瞬间打滑) ---
+            float delta_L = nav_L - Replay_Last_L;
+            float delta_R = nav_R - Replay_Last_R;
+            
+            // 【参数】加速度阈值：2ms内脉冲突变不允许超过 15。
+            // (15相当于极强的物理推背感，超过这个值99%是车轮空转打滑)
+            float slip_threshold = 40.0f; 
+            
+            if (fabsf(delta_L) > slip_threshold) {
+                nav_L = Replay_Last_L + (delta_L > 0 ? slip_threshold : -slip_threshold);
+            }
+            if (fabsf(delta_R) > slip_threshold) {
+                nav_R = Replay_Last_R + (delta_R > 0 ? slip_threshold : -slip_threshold);
+            }
+            
+            // --- 第二重保护：绝对物理极限限幅 (防彻底腾空空转) ---
+            // 【参数】最大车速阈值：假设车子物理极限速度是 120cm/s (约 150脉冲/2ms)
+            float max_abs_speed = 150.0f; 
+            if(nav_L > max_abs_speed) nav_L = max_abs_speed; else if(nav_L < -max_abs_speed) nav_L = -max_abs_speed;
+            if(nav_R > max_abs_speed) nav_R = max_abs_speed; else if(nav_R < -max_abs_speed) nav_R = -max_abs_speed;
+            
+            // 更新历史值供下个2ms使用
+            Replay_Last_L = nav_L;
+            Replay_Last_R = nav_R;
+            
+            // 喂给导航系统进行安全积分
+            Total_Encoder_L = nav_L;
+            Total_Encoder_R = nav_R;
         }
-        
-        Last_SpeedLeft = nav_SpeedLeft;
-        Last_SpeedRight = nav_SpeedRight;
-		
-        Total_Encoder_L = SpeedLeft;  // 不再强转，保留 0.82、1.15 这种精细位移
-        Total_Encoder_R = SpeedRight;
         
         Nag_System(); // 执行惯导核心 (2ms 一次)
 		
@@ -137,7 +164,7 @@ void TIM1_UP_IRQHandler (void)
     {
         // 只有要平衡的时候，才算 PID，才给电机通电
         if(N.Nag_SystemRun_Index == 3) {
-             Turn_Target = N.Final_Out * 8.0f; 
+             Turn_Target = N.Final_Out * 9.0f; 
         } 
         
         Turn_PIDControl();            

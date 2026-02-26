@@ -95,7 +95,7 @@ void Run_Nag_GPS(void)
     
     // ★ 核心修复 1：既然 1个点=1cm，预瞄距离必须拉长！
     // 设基础预瞄为 25cm，速度越快看得越远
-    float L_distance = 0.0f + current_speed * 0.14f; 
+    float L_distance = 3.0f + current_speed * 0.13f; 
     if(L_distance > 80.0f) L_distance = 80.0f; // 最多看前方 80cm
     
     // 算力优化：提前算好平方，下面比对时就不需要开根号了
@@ -157,7 +157,7 @@ void Run_Nag_GPS(void)
     // ★ 核心修复 2：因为 L 放大了，L的平方放大了几十倍，这里的系数也要相应增加，保证转向力
     N.Final_Out = curvature * 1500.0f; 
 
-    float max_turn = 30.0f; 
+    float max_turn = 50.0f; 
     if(N.Final_Out > max_turn)  N.Final_Out = max_turn;
     if(N.Final_Out < -max_turn) N.Final_Out = -max_turn;
     

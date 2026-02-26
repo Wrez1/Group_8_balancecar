@@ -22,6 +22,9 @@ void clear_location(void);
 // 以后所有文件都只认这三个变量！
 extern float SpeedLeft;   // 左轮速度 (经过滤波)
 extern float SpeedRight;  // 右轮速度 (经过滤波)
+// ★ 新增声明
+extern float Raw_SpeedLeft;
+extern float Raw_SpeedRight;
 extern float Location;
 
 #endif
