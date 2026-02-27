@@ -9,7 +9,7 @@
 #include "icm20602.h"
 #include "navigation.h"
 #include "isr.h"
-#include "buzzer.h"
+//#include "buzzer.h"
 //非编辑模式（PID设置界面）：
 // KEY_1: 切换到下一个环（角度环→速度环→转向环）
 // KEY_2: 切换到上一个环（转向环→速度环→角度环）
@@ -134,6 +134,7 @@ void showplace1(uint8 x){
 	}
 }
 
+extern volatile float Auto_Drive_Distance;
 void showplace2(uint8 x){
 	switch(x){
 		case 1:
@@ -150,9 +151,9 @@ void showplace2(uint8 x){
 			tft180_show_string(0, 10, "    MODE 2: run circle ");
 			tft180_show_string(0, 50, "   GO!GO!GO!           ");
 			tft180_show_string(0,60 ,"                        ");
-			tft180_show_string(0,70 ,"                        ");
-			tft180_show_string(0,80 ,"                        ");
-			tft180_show_string(0,90 ,"                        ");
+			tft180_show_float(0,70 , SpeedLeft,4,3);
+			tft180_show_float(0,80 , SpeedRight,4,3);
+			tft180_show_float(0,90 , Auto_Drive_Distance,4,3);
 			tft180_show_string(0,100,"                        ");
 		    tft180_show_string(0,110,"                        ");
 			break;
@@ -425,6 +426,20 @@ void menu(uint8* xp, uint8* yp,
     static uint8 mech_zero_edit = 0;
 			  
     if(*yp == 0) {  // 主菜单
+		// ==========================================================
+        // ★★★ 核心安全机制：只要退回主菜单，全系统强制进入“瘫痪”待机状态 ★★★
+        // ==========================================================
+        balance_mode_active = 0;   // 1. 关掉底层推力，不再维持平衡
+        blue_mode_active = 0;      // 2. 关掉特殊中断权限
+        Control_Mode = 0;          // 3. 关掉所有外环(速度/位置/自动驾驶)
+        
+        SpeedPID.Target = 0.0f;    // 4. 目标速度清零
+        Turn_Target = 0.0f;        // 5. 转向目标清零
+        
+        N.Nag_SystemRun_Index = 0; // 6. 惯导状态机强制切回空闲
+        N.Nag_Stop_f = 0;          
+        
+        motor_control(0, 0);       // 7. 物理级断电，彻底瘫软在地
         showpalce0(*xp);
         
         if(key_get_state(KEY_1) == KEY_SHORT_PRESS) {
@@ -487,16 +502,23 @@ void menu(uint8* xp, uint8* yp,
                 key_clear_state(KEY_3);
 				// 进入 GO!GO!GO!
                 if (*yp == 2) {
-                    balance_mode_active = 1; // 借用这个标志位开启定时器中断
+                    balance_mode_active = 1; // 1. 开启直立平衡
+                    Control_Mode = 2;        // 2. 告诉系统进入模式 2 的状态机
                     
-                    // ★★★ 核心修改：切换到循迹模式 (2) ★★★
-                    Control_Mode = 2; 
+                    // 3. ★★★ 核心：彻底清空状态机历史进度 ★★★
+                    extern uint8_t Auto_Drive_State;
+                    Auto_Drive_State = 0;       // 回到第0阶段(直道盲走)
+                    Auto_Drive_Distance = 0.0f; // 里程清零
                     
-                    // 清零 PID 防止突变
+                    // 4. ★★★ 核心：重置车头航向角 ★★★
+                    // 这相当于告诉小车：“你现在的朝向就是绝对 0 度赛道方向”
+                    IMU_Instant_Init();
+                    
+                    // 5. 清空 PID 防止起步瞬间突变抽搐
                     SpeedPID.Target = 0;
                     Turn_Target = 0;
                     PID_Init(&SpeedPID);
-					PID_Init(&AnglePID);
+                    PID_Init(&AnglePID);
                     PID_Init(&TurnPID);
                 }
             }
@@ -511,9 +533,42 @@ void menu(uint8* xp, uint8* yp,
             if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
                 *yp += 1;
                 key_clear_state(KEY_3);
+				
+				// === 瞬间进入 GO!GO!GO! 状态 ===
+                if (*yp == 2) {
+                    balance_mode_active = 1; // 1. 开启底层直立平衡推力
+                    Control_Mode = 3;        // 2. 告诉中枢大脑，进入模式3状态机
+                    
+                    // 3. ★★★ 核心：彻底清空状态机、里程与【跑圈计数】 ★★★
+                    extern uint8_t Auto_Drive_State;
+                    extern volatile uint8_t Loop_Count;
+                    extern volatile float Auto_Drive_Distance;
+                    
+                    Auto_Drive_State = 0;       // 切回阶段 0：对角线盲走
+                    Auto_Drive_Distance = 0.0f; // 里程池子强行抽干
+                    Loop_Count = 0;             // 圈数清零，重新算 4 圈
+                    
+                    // 4. ★★★ 核心：重置车头航向参考系 ★★★
+                    // 车头依然要正对 B 点，程序会自动把它定为 0 度，然后自己往 38.6 度歪头
+                    IMU_Instant_Init();
+                    
+                    // 5. 清空残余的油门和方向盘，防止起步瞬间暴走
+                    SpeedPID.Target = 0.0f;
+                    extern float Turn_Target;
+                    Turn_Target = 0.0f;
+                    
+                    PID_Init(&SpeedPID);
+                    PID_Init(&AnglePID);
+                    PID_Init(&TurnPID);
+                }
             }
             if(*yp > 2) *yp = 1;
             if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
+				if(*yp == 2) { // 如果车子正处于狂飙状态
+                    balance_mode_active = 0; // 瞬间拔掉底层电机电源
+                    Control_Mode = 0;        // 拔掉大脑控制权
+                    motor_control(0, 0);     // 瘫软在地
+                }
                 *yp = 0;
                 key_clear_state(KEY_4);
             }

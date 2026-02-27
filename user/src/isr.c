@@ -39,6 +39,17 @@ void TIM1_UP_IRQHandler (void)
     
 	//Control_Divider++;
 	encoder_Get_Speed();
+    // 3. ★ 新增：蜂鸣器非阻塞心跳 (必须放进来，否则蜂鸣器长鸣)
+    extern void Beep_Flash_Task(void);
+    Beep_Flash_Task();
+    // ★★★ 必须加上这段：为 H 题状态机提供高精度距离积算 ★★★
+    if (Control_Mode == 2 || Control_Mode == 3)
+    {
+        extern volatile float Auto_Drive_Distance;
+        // 把 2ms 的位移累加到距离池子里 (单位: cm)
+        float step_dist = (Raw_SpeedLeft + Raw_SpeedRight) / 2.0f / 647.0f; 
+        Auto_Drive_Distance += step_dist;
+    }
 	
 	// 2. ★★★ 核心修改：安全锁 ★★★
     // 如果 两个模式都没激活，就强制关电机，并退出中断
@@ -206,13 +217,21 @@ void TIM1_UP_IRQHandler (void)
 	TIM1->SR &= ~TIM1->SR;
 }
 
+
+// 在函数外面声明外部变量和函数
+extern volatile uint8_t Control_Mode;
+extern void Run_Auto_Drive_Logic(uint8_t mode);
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     TIM2 的定时器中断服务函数 启动 .s 文件定义 不允许修改函数名称
 //              默认优先级 修改优先级使用 interrupt_set_priority(TIM2_IRQn, 1);
 //-------------------------------------------------------------------------------------------------------------------
 void TIM2_IRQHandler (void)
 {
-    // 此处编写用户代码
+    // ★ 在这里调用高层状态机 (大脑)
+    if (Control_Mode == 2 || Control_Mode == 3)
+    {
+        Run_Auto_Drive_Logic(Control_Mode);
+    }
 
     // 此处编写用户代码
     TIM2->SR &= ~TIM2->SR;                                                      // 清空中断状态

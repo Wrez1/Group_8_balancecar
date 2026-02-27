@@ -8,7 +8,7 @@
 
 #include "zf_common_headfile.h"
 #include "icm20602.h" // 引用姿态，为了获取 Yaw
-
+#include "track.h"
 // ================= 用户设置区域 =================
 
 // 1. 存储空间定义
@@ -17,7 +17,7 @@
 #define MaxSize 5000    
 
 // 2. 里程计阈值
-#define Nag_Set_mileage 647 
+#define Nag_Set_mileage 686 
 
 // 3. 传感器绑定
 #define Nag_Yaw Car_Attitude.Yaw // 使用你调好的无漂移 Yaw

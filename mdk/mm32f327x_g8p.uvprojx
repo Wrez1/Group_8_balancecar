@@ -406,11 +406,6 @@
           <GroupName>code</GroupName>
           <Files>
             <File>
-              <FileName>error.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\code\error.h</FilePath>
-            </File>
-            <File>
               <FileName>sensor.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\code\sensor.c</FilePath>
@@ -419,11 +414,6 @@
               <FileName>sensor.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\code\sensor.h</FilePath>
-            </File>
-            <File>
-              <FileName>error.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\code\error.c</FilePath>
             </File>
             <File>
               <FileName>element.c</FileName>

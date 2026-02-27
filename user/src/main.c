@@ -147,6 +147,7 @@ int main(void)
 	Init_Nag();
     // 4. 开启控制中断
     pit_ms_init(TIM1_PIT, 2); // 2ms 中断
+	pit_ms_init(TIM2_PIT, 10);
 	tft180_clear();
 	while(1){
 		if (blue_mode_active) {

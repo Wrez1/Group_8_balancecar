@@ -1,106 +1,96 @@
-#include "zf_common_headfile.h"
 #include "track.h"
-#include "sensor.h"  // 假设你有一个包含传感器读取的头文件
-#include "pid.h"
+#include "sensor.h" 
 #include "led.h"
 #include "buzzer.h"
-#include "math.h"
 
-// 引入全局变量
-extern float Turn_Target;
-
-// 传感器权值数组（4路传感器）
-const int8_t Track_Weight[4] = {-3,-1,1,3};  // 根据你传感器的排列和精度调整权值
-
-// 上一次的循迹输出（记忆用）
-float Track_Last_Output = 0.0f;
-
-// 是否检测到线
-uint8_t Track_Has_Line = 0;
-
-// 计算误差
-float Track_Calc_Error(void)
+// ==========================================================
+// 1. 4路红外寻迹偏差计算 (作为眼睛，只返回数据，不乱动PID)
+// 返回值：给转向环的 Turn_Target。如果没有压线，返回 999.0f (标志位)
+// ==========================================================
+float Get_IR_Turn_Out(uint8 curve_dir) 
 {
-    int sum = 0;
-    int count = 0;
-
-    // 读取传感器值（1 表示检测到黑线，0 表示没有）
-    uint8_t sensor[4] = {D1,D2,D3,D4};  // 假设你有一个 D1-D7 定义传感器状态
-
-    for (int i = 0; i < 4; i++)
+    // 读取传感器 (1 = 黑线，0 = 白底)
+    // 假设 D1最左, D2偏左, D3偏右, D4最右
+    uint8_t L2 = D1; 
+    uint8_t L1 = D2; 
+    uint8_t R1 = D3; 
+    uint8_t R2 = D4; 
+    
+    float turn_out = 0.0f;
+    uint8_t line_detect = L2 | L1 | R1 | R2;
+    
+	// ★ 增加静态变量，记住小车上一瞬间的转弯趋势
+    static float last_turn_out = 0.0f;
+    // 如果全白 (四路都没踩到黑线)
+    if (line_detect == 0) 
     {
-        if (sensor[i] == 1)   // 黑线
+        return 999.0f; // 999 代表丢线了，交给 H 题状态机去处理(盲走)
+    }
+
+    // 寻迹逻辑 (状态穷举法，比队友的加权平均法在转急弯时更凶悍、更稳定)
+    // 注意正负号：如果偏左导致右转，符号根据你的车轮实际情况调整
+    float Kp_Track = 85.0f; // 【调参点】常规修正力度
+    float Kp_Sharp = 117.0f; // 【调参点】急弯修正力度
+
+    // ===============================================
+    // ★ 核心机制：弯道方向优先级 (防甩尾屏蔽逻辑)
+    // ===============================================
+    if (curve_dir == 1) // 【当前大脑知道我们在过右半圆 (B->C)】
+    {
+        // 右弯时，黑线理应在车身右侧。如果左侧亮了，99%是车速太快甩尾导致的假象！
+        if      (R2) turn_out = -Kp_Sharp;          // 压到最右边，全力向右拽回！
+        else if (R1) turn_out = -Kp_Track;          // 偏右，正常向右微调
+        // --- 下面是防甩尾核心 ---
+        else if (L1) turn_out = Kp_Track * 0.6f;    // ★ 甩尾假象！削弱 80% 的反向拉扯力
+        else if (L2) turn_out = Kp_Sharp * 0.5f;    // ★ 严重甩尾！削弱 80% 的反向拉扯力
+        else         turn_out = last_turn_out;
+    }
+    else if (curve_dir == 2) // 【当前大脑知道我们在过左半圆 (D->A)】
+    {
+        if      (L2) turn_out = Kp_Sharp;           // 压到最左边，全力向左拽回！
+        else if (L1) turn_out = Kp_Track;           // 偏左，正常向左微调
+        // --- 下面是防甩尾核心 ---
+        else if (R1) turn_out = -Kp_Track * 0.6f;   // ★ 甩尾假象！削弱 80% 的反向拉扯力
+        else if (R2) turn_out = -Kp_Sharp * 0.5f;   // ★ 严重甩尾！削弱 80% 的反向拉扯力
+        else         turn_out = last_turn_out;
+    }
+    else // 【未知情况或直道情况 (curve_dir == 0)】- 维持你的原始逻辑
+    {
+        if      (L1 && R1)            turn_out = 0.0f;      
+        else if (L1 && !R1 && !L2)    turn_out = Kp_Track;  
+        else if (R1 && !L1 && !R2)    turn_out = -Kp_Track; 
+        else if (L2)                  turn_out = Kp_Sharp;  
+        else if (R2)                  turn_out = -Kp_Sharp; 
+        else                          turn_out = last_turn_out;      
+    }
+    
+    last_turn_out = turn_out; // 更新记忆
+    return turn_out;
+}
+
+// ==========================================================
+// 2. 非阻塞式声光提示 (告别 system_delay_ms)
+// ==========================================================
+static uint16_t beep_timer = 0; // 倒计时变量
+
+// 任何地方想要响蜂鸣器，调用这个函数即可 (瞬间返回，绝对不卡)
+void Trigger_Beep(void)
+{
+    beep_timer = 50; // 50 * 2ms = 100ms
+    led_on(1);
+    buzzer_on(1);
+}
+
+// 把这个函数放到 2ms 定时器中断 (TIM1_UP_IRQHandler) 里不断循环
+void Beep_Flash_Task(void)
+{
+    if (beep_timer > 0)
+    {
+        beep_timer--;
+        if (beep_timer == 0) // 时间到了，自动关掉
         {
-            sum += Track_Weight[i];
-            count++;
+            led_on(0);
+            buzzer_on(0);
         }
-    }
-
-    if (count == 0)
-    {
-        Track_Has_Line = 0;
-        return Track_Last_Output;   // 没线时返回上一次值，保持直行
-    }
-    else
-    {
-        Track_Has_Line = 1;
-        Track_Last_Output = (float)sum / count;
-        return Track_Last_Output;   // 计算偏差并记住当前状态
-    }
-}
-
-// 控制任务（将误差传递给PID控制）
-void Track_Control_Task(void)
-{
-    // 1. 计算偏差
-    float track_error = Track_Calc_Error();
-
-    // 2. 设定速度 (比如 3.0 或 5.0，太快容易脱轨)
-    SpeedPID.Target = 5.0f; 
-
-    // 3. ★关键对接★：把循迹误差转化为转向目标
-    // 系数 3.0f 是“转向灵敏度”，如果转弯转不过来，把这个数改大 (比如 5.0)
-    // 如果车子在直线上疯狂摆头，把这个数改小 (比如 1.0)
-    Turn_Target = track_error * 3.0f;
-
-
-}
-
-void led_buzzer(void){
-	led_on(1);
-	buzzer_on(1);
-	system_delay_ms(100);
-	led_on(0);
-	buzzer_on(0);
-}
-
-
-typedef enum
-{
-    LINE_NONE = 0,   // 未检测到黑线
-    LINE_DETECTED    // 检测到黑线
-} line_state_t;
-
-static line_state_t line_state_last = LINE_NONE;
-static line_state_t line_state_now  = LINE_NONE;
-
-line_state_t Line_Detect(void)
-{
-    // 示例：假设 1 = 黑线，0 = 非黑线
-    if (Track_Has_Line == 1)
-        return LINE_DETECTED;
-    else
-        return LINE_NONE;
-}
-
-void Line_Edge_Check_Task(void)
-{
-    line_state_now = Line_Detect();
-
-    // ? 关键：状态发生变化
-    if (line_state_now != line_state_last)
-    {
-        led_buzzer();   // 只在变化瞬间调用一次
-        line_state_last = line_state_now;
     }
 }
