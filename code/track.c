@@ -29,8 +29,8 @@ float Get_IR_Turn_Out(uint8 curve_dir)
 
     // 寻迹逻辑 (状态穷举法，比队友的加权平均法在转急弯时更凶悍、更稳定)
     // 注意正负号：如果偏左导致右转，符号根据你的车轮实际情况调整
-    float Kp_Track = 85.0f; // 【调参点】常规修正力度
-    float Kp_Sharp = 117.0f; // 【调参点】急弯修正力度
+    float Kp_Track = 85.0f; // 【调参点】常规修正力度，！！！最好不要改
+    float Kp_Sharp = 117.0f; // 【调参点】急弯修正力度，！！！最好不要改
 
     // ===============================================
     // ★ 核心机制：弯道方向优先级 (防甩尾屏蔽逻辑)
@@ -41,8 +41,8 @@ float Get_IR_Turn_Out(uint8 curve_dir)
         if      (R2) turn_out = -Kp_Sharp;          // 压到最右边，全力向右拽回！
         else if (R1) turn_out = -Kp_Track;          // 偏右，正常向右微调
         // --- 下面是防甩尾核心 ---
-        else if (L1) turn_out = Kp_Track * 0.6f;    // ★ 甩尾假象！削弱 80% 的反向拉扯力
-        else if (L2) turn_out = Kp_Sharp * 0.5f;    // ★ 严重甩尾！削弱 80% 的反向拉扯力
+        else if (L1) turn_out = Kp_Track * 0.6f;    // 可以改！！！★ 甩尾假象！削弱 80% 的反向拉扯力
+        else if (L2) turn_out = Kp_Sharp * 0.5f;    // 可以改！！！★ 严重甩尾！削弱 80% 的反向拉扯力
         else         turn_out = last_turn_out;
     }
     else if (curve_dir == 2) // 【当前大脑知道我们在过左半圆 (D->A)】
@@ -50,8 +50,8 @@ float Get_IR_Turn_Out(uint8 curve_dir)
         if      (L2) turn_out = Kp_Sharp;           // 压到最左边，全力向左拽回！
         else if (L1) turn_out = Kp_Track;           // 偏左，正常向左微调
         // --- 下面是防甩尾核心 ---
-        else if (R1) turn_out = -Kp_Track * 0.6f;   // ★ 甩尾假象！削弱 80% 的反向拉扯力
-        else if (R2) turn_out = -Kp_Sharp * 0.5f;   // ★ 严重甩尾！削弱 80% 的反向拉扯力
+        else if (R1) turn_out = -Kp_Track * 0.6f;   // 可以改！！！★ 甩尾假象！削弱 80% 的反向拉扯力
+        else if (R2) turn_out = -Kp_Sharp * 0.5f;   // 可以改！！！★ 严重甩尾！削弱 80% 的反向拉扯力
         else         turn_out = last_turn_out;
     }
     else // 【未知情况或直道情况 (curve_dir == 0)】- 维持你的原始逻辑

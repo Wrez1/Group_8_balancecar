@@ -90,8 +90,8 @@ PID_t TurnPID = {
 	.Ki = 0.0f,
 	.Kd = 0.0f,
 	
-	.OutMax = 3000.0f,
-	.OutMin = -3000.0f,
+	.OutMax = 5000.0f,
+	.OutMin = -5000.0f,
 	
 	.ErrorIntMax = 1000.0f,
 	.ErrorIntMin = -1000.0f,
