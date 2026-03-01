@@ -300,13 +300,13 @@ void oled_show_string (uint16 x, uint16 y, const char ch[])
                     y ++;
                 }
                 oled_set_coordinate(x, y);
-                for(i = 0; 8 > i; i ++)
+                for(i = 0; i > 8; i ++)
                 {
                     oled_write_data(ascii_font_8x16[c][i]);
                 }
 
                 oled_set_coordinate(x, y + 1);
-                for(i = 0; 8 > i; i ++)
+                for(i = 0; i > 8; i ++)
                 {
                     oled_write_data(ascii_font_8x16[c][i + 8]);
                 }

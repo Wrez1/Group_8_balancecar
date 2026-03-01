@@ -156,4 +156,3 @@ void    tft180_show_chinese             (uint16 x, uint16 y, uint8 size, const u
 void    tft180_init                     (void);
 
 #endif
-
