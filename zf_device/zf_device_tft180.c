@@ -62,7 +62,7 @@ static uint16                   tft180_pencolor     = TFT180_DEFAULT_PENCOLOR;
 static uint16                   tft180_bgcolor      = TFT180_DEFAULT_BGCOLOR;
 
 static tft180_dir_enum          tft180_display_dir  = TFT180_DEFAULT_DISPLAY_DIR;
-static tft180_font_size_enum    tft180_display_font = TFT180_6X8_FONT;
+static tft180_font_size_enum    tft180_display_font = TFT180_DEFAULT_DISPLAY_FONT;
 
 static uint8            tft180_x_max        = 160;
 static uint8            tft180_y_max        = 128;
@@ -291,7 +291,7 @@ void tft180_set_dir (tft180_dir_enum dir)
 //-------------------------------------------------------------------------------------------------------------------
 void tft180_set_font (tft180_font_size_enum font)
 {
-    tft180_display_font = font;
+    tft180_display_font = 0;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
