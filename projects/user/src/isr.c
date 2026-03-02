@@ -47,7 +47,7 @@ void TIM1_UP_IRQHandler (void)
     {
         extern volatile float Auto_Drive_Distance;
         // 把 2ms 的位移累加到距离池子里 (单位: cm)
-        float step_dist = (Raw_SpeedLeft + Raw_SpeedRight) / 2.0f / 647.0f; 
+        float step_dist = (Raw_SpeedLeft + Raw_SpeedRight) / 2.0f / 686.0f; 
         Auto_Drive_Distance += step_dist;
     }
 	

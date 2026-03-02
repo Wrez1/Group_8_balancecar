@@ -368,13 +368,21 @@ void Run_Auto_Drive_Logic(uint8_t mode)
 					SpeedPID.Target = 70.0f;
 				}
 				else {
-                    SpeedPID.Target = 50.0f;
-                }
-                // 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
-                Turn_Target = Get_Minor_Arc(-47.0f, Car_Attitude.Yaw) * 4.0f; 
+                    SpeedPID.Target = 70.0f;
+                } 
+				
+				if(Auto_Drive_Distance < 99.0f)
+				{
+					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
+					Turn_Target = (Loop_Count == 0 ? Get_Minor_Arc(-48.2f, Car_Attitude.Yaw) * 4.0f : Get_Minor_Arc(-54.0f, Car_Attitude.Yaw) * 4.0f);
+				}
+				else{
+					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
+                Turn_Target = Get_Minor_Arc(-31.0f, Car_Attitude.Yaw) * 4.0f;
+				}
                 
                 // 【调参点2：寻迹眼睁开时机】对角线较长，90cm睁眼比较安全
-                if ((Auto_Drive_Distance > 130.0f && is_on_line) || Auto_Drive_Distance > 152.0f) {
+                if ((Auto_Drive_Distance > 130.0f && is_on_line) || Auto_Drive_Distance > 149.0f) {
                     Trigger_Beep();
                     Auto_Drive_State = 1; Auto_Drive_Distance = 0; 
                 }
@@ -382,10 +390,10 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 
             case 1: // 阶段 1：C -> B 右半圆寻迹
          
-                SpeedPID.Target = 50.0f; // 弯道一定要稳！
+                SpeedPID.Target = 75.0f; // 弯道一定要稳！
 			
                 if (Auto_Drive_Distance < 15.0f) {
-                    Turn_Target = 70.0f; // 【调参点】暴力左转，硬把车头砸进赛道
+                    Turn_Target = 60.0f; // 【调参点】暴力左转，硬把车头砸进赛道
                 }    
 			
                 if(is_on_line) {
@@ -396,11 +404,11 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                     if(is_on_line) {
                         Turn_Target = ir_out; 
                     } else {
-                        Turn_Target = 60.0f; // 正常的防丢线保底
+                        Turn_Target = 50.0f; // 正常的防丢线保底
                     }
                 }
                 
-                if (Auto_Drive_Distance > 140.0f && !is_on_line) {
+                if (Auto_Drive_Distance > 130.0f && !is_on_line) {
                     Trigger_Beep();
                     Auto_Drive_State = 2; Auto_Drive_Distance = 0; 
                 }
@@ -416,22 +424,30 @@ void Run_Auto_Drive_Logic(uint8_t mode)
 					SpeedPID.Target = 70.0f;
 				}
 				else {
-                    SpeedPID.Target = 50.0f;
+                    SpeedPID.Target = 70.0f;
                 }
-                // 从 B 到 D 的绝对航向角是 141.4 度
-                Turn_Target = Get_Minor_Arc(224.0f, Car_Attitude.Yaw) * 4.0f; 
+				
+                if(Auto_Drive_Distance < 99.0f)
+				{
+					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
+                Turn_Target = (Loop_Count == 0 ? Get_Minor_Arc(231.5f, Car_Attitude.Yaw) * 4.0f : Get_Minor_Arc(233.0f, Car_Attitude.Yaw) * 4.0f);
+				}
+				else{
+					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
+                Turn_Target = Get_Minor_Arc(212.0f, Car_Attitude.Yaw) * 4.0f;
+				}
                 
-                if ((Auto_Drive_Distance > 130.0f && is_on_line) || Auto_Drive_Distance > 152.0f) {
+                if ((Auto_Drive_Distance > 130.0f && is_on_line) || Auto_Drive_Distance > 149.0f) {
                     Trigger_Beep();
                     Auto_Drive_State = 3; Auto_Drive_Distance = 0; 
                 }
                 break;
                 
             case 3: // 阶段 3：D -> A 左半圆寻迹
-               SpeedPID.Target = 50.0f; // 弯道一定要稳！
+               SpeedPID.Target = 75.0f; // 弯道一定要稳！
 			
                 if (Auto_Drive_Distance < 15.0f) {
-                    Turn_Target = 70.0f; // 【调参点】暴力左转，硬把车头砸进赛道
+                    Turn_Target = -60.0f; // 【调参点】暴力左转，硬把车头砸进赛道
                 }    
 			
                 if(is_on_line) {
@@ -442,7 +458,7 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                     if(is_on_line) {
                         Turn_Target = ir_out; 
                     } else {
-                        Turn_Target = -60.0f; // 正常的防丢线保底
+                        Turn_Target = -50.0f; // 正常的防丢线保底
                     }
                 }
                 

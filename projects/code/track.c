@@ -55,7 +55,7 @@ float Get_IR_Turn_Out(uint8 curve_dir)
         // 右弯时，黑线理应在右侧（center > 0）
         if (center > 0) {
             // 黑线偏左，可能是甩尾，削弱转向力度
-            turn_out = -center * kp * 0.7f;  // 削弱系数0.5可调
+            turn_out = -center * kp * 0.5f;  // 削弱系数0.5可调
         } else {
             turn_out = -center * kp;
         }
@@ -65,7 +65,7 @@ float Get_IR_Turn_Out(uint8 curve_dir)
         // 左弯时，黑线理应在左侧（center < 0）
         if (center < 0) {
             // 黑线偏右，可能是甩尾，削弱转向力度
-            turn_out = -center * kp * 0.7f;
+            turn_out = -center * kp * 0.5f;
         } else {
             turn_out = -center * kp;
         }
