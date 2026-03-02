@@ -101,16 +101,18 @@ void Speed_PIDControl(void)
     float CurrentAveSpeed = (SpeedLeft + SpeedRight) / 2.0f;
     
     // 2. 原地旋转时的特殊处理
-    if (blue_mode_active == 1 && fabsf(Turn_Target) > 40.0f && fabsf(SpeedPID.Target) < 20.0f)
+    if (blue_mode_active == 1 && fabsf(Turn_Target) > 15.0f && fabsf(SpeedPID.Target) < 5.0f)
     {
-        // 欺骗 PID
+        // 欺骗 PID，告诉它现在的速度很完美
         SpeedPID.Actual = SpeedPID.Target;
         
-        // ★★★ 关键：增量式必须清空这些状态，否则切回来会疯 ★★★
+        // ★★★ 核心修复：绝对不要手动写 SpeedPID.Out = 0.0f; ★★★
+        // 增量式 PID 的特性就是：如果误差一直为 0，输出就会自动保持在上一刻的值。
+        // 保留它最后一点输出，恰好能稳住车子的重心，不会引起突然的俯仰跳变。
         SpeedPID.Error0 = 0.0f;
         SpeedPID.Error1 = 0.0f;
-        SpeedPID.Last_Integral = 0.0f; // 清空滤波历史
-        SpeedPID.Out = 0.0f;           // 清空输出 (不发力)
+        
+        PID_Update_Incre(&SpeedPID);
     }
     else
     {
@@ -189,7 +191,7 @@ void Position_PIDControl(void)
 extern Attitude_t Car_Attitude; 
 extern PID_t GyroPID;           
 extern PID_t AnglePID;
-float Mechanical_Zero_Pitch = -0.310f;
+float Mechanical_Zero_Pitch = -0.290f;
 void Angle_Gyro_Cascade_Control(void)
 {
     // 使用局部变量，访问速度快，无副作用

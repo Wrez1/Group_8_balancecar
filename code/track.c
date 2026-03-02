@@ -2,69 +2,83 @@
 #include "sensor.h" 
 #include "led.h"
 #include "buzzer.h"
+#include <math.h>   // 使用 fabsf
 
 // ==========================================================
-// 1. 4路红外寻迹偏差计算 (作为眼睛，只返回数据，不乱动PID)
+// 1. 8路红外寻迹偏差计算 (作为眼睛，只返回数据，不乱动PID)
 // 返回值：给转向环的 Turn_Target。如果没有压线，返回 999.0f (标志位)
 // ==========================================================
 float Get_IR_Turn_Out(uint8 curve_dir) 
 {
-    // 读取传感器 (1 = 黑线，0 = 白底)
-    // 假设 D1最左, D2偏左, D3偏右, D4最右
-    uint8_t L2 = D1; 
-    uint8_t L1 = D2; 
-    uint8_t R1 = D3; 
-    uint8_t R2 = D4; 
+    // 读取传感器 (假设 1 = 黑线，0 = 白底)
+    // 从左到右依次为 D1~D8
+    uint8_t sensors[8] = {D1, D2, D3, D4, D5, D6, D7, D8};
+    const float weight[8] = {-7.0f, -5.0f, -3.0f, -1.0f, 1.0f, 3.0f, 5.0f, 7.0f};
     
-    float turn_out = 0.0f;
-    uint8_t line_detect = L2 | L1 | R1 | R2;
+    float sum = 0.0f;
+    int count = 0;
+    uint8_t line_detect = 0;
     
-	// ★ 增加静态变量，记住小车上一瞬间的转弯趋势
-    static float last_turn_out = 0.0f;
-    // 如果全白 (四路都没踩到黑线)
-    if (line_detect == 0) 
+    // 计算加权和以及黑线数量
+    for (int i = 0; i < 8; i++) {
+        if (sensors[i] == 1) { // 检测到黑线
+            sum += weight[i];
+            count++;
+        }
+    }
+    
+    
+    // 如果全白 (八路都没踩到黑线)
+    if (count == 0 && !D8 && !D7) 
     {
         return 999.0f; // 999 代表丢线了，交给 H 题状态机去处理(盲走)
     }
 
-    // 寻迹逻辑 (状态穷举法，比队友的加权平均法在转急弯时更凶悍、更稳定)
-    // 注意正负号：如果偏左导致右转，符号根据你的车轮实际情况调整
-    float Kp_Track = 85.0f; // 【调参点】常规修正力度，！！！最好不要改
-    float Kp_Sharp = 117.0f; // 【调参点】急弯修正力度，！！！最好不要改
+    // 计算黑线中心位置（加权平均）
+    float center = sum / count; // 范围 -7 ~ 7
+    float abs_center = fabsf(center);
+
+    // 寻迹逻辑：比例控制，结合弯道方向削弱防甩尾
+    // 定义比例系数：常规修正力度，急弯修正力度（根据偏移大小自动切换）
+    float Kp_Track = 80.0f;  // 【调参点】常规修正力度（偏移较小时）
+    float Kp_Sharp = 110.0f;  // 【调参点】急弯修正力度（偏移较大时）
+
+    float turn_out = 0.0f;
+    // 根据中心偏移大小选择比例系数
+    float kp = (abs_center > 4.0f) ? Kp_Sharp : Kp_Track;
 
     // ===============================================
     // ★ 核心机制：弯道方向优先级 (防甩尾屏蔽逻辑)
     // ===============================================
-    if (curve_dir == 1) // 【当前大脑知道我们在过右半圆 (B->C)】
+    if (curve_dir == 1) // 【当前大脑知道我们在过右半圆】
     {
-        // 右弯时，黑线理应在车身右侧。如果左侧亮了，99%是车速太快甩尾导致的假象！
-        if      (R2) turn_out = -Kp_Sharp;          // 压到最右边，全力向右拽回！
-        else if (R1) turn_out = -Kp_Track;          // 偏右，正常向右微调
-        // --- 下面是防甩尾核心 ---
-        else if (L1) turn_out = Kp_Track * 0.6f;    // 可以改！！！★ 甩尾假象！削弱 80% 的反向拉扯力
-        else if (L2) turn_out = Kp_Sharp * 0.5f;    // 可以改！！！★ 严重甩尾！削弱 80% 的反向拉扯力
-        else         turn_out = last_turn_out;
+        // 右弯时，黑线理应在右侧（center > 0）
+        if (center > 0) {
+            // 黑线偏左，可能是甩尾，削弱转向力度
+            turn_out = -center * kp * 0.5f;  // 削弱系数0.5可调
+        } else {
+            turn_out = -center * kp;
+        }
     }
-    else if (curve_dir == 2) // 【当前大脑知道我们在过左半圆 (D->A)】
+    else if (curve_dir == 2) // 【当前大脑知道我们在过左半圆】
     {
-        if      (L2) turn_out = Kp_Sharp;           // 压到最左边，全力向左拽回！
-        else if (L1) turn_out = Kp_Track;           // 偏左，正常向左微调
-        // --- 下面是防甩尾核心 ---
-        else if (R1) turn_out = -Kp_Track * 0.6f;   // 可以改！！！★ 甩尾假象！削弱 80% 的反向拉扯力
-        else if (R2) turn_out = -Kp_Sharp * 0.5f;   // 可以改！！！★ 严重甩尾！削弱 80% 的反向拉扯力
-        else         turn_out = last_turn_out;
+        // 左弯时，黑线理应在左侧（center < 0）
+        if (center < 0) {
+            // 黑线偏右，可能是甩尾，削弱转向力度
+            turn_out = -center * kp * 0.5f;
+        } else {
+            turn_out = -center * kp;
+        }
     }
-    else // 【未知情况或直道情况 (curve_dir == 0)】- 维持你的原始逻辑
+    else // 【未知情况或直道情况】
     {
-        if      (L1 && R1)            turn_out = 0.0f;      
-        else if (L1 && !R1 && !L2)    turn_out = Kp_Track;  
-        else if (R1 && !L1 && !R2)    turn_out = -Kp_Track; 
-        else if (L2)                  turn_out = Kp_Sharp;  
-        else if (R2)                  turn_out = -Kp_Sharp; 
-        else                          turn_out = last_turn_out;      
+        turn_out = center * kp;
     }
-    
-    last_turn_out = turn_out; // 更新记忆
+
+    // 限幅，防止输出过大（可根据实际调整）
+    if (turn_out > 3000.0f) turn_out = 3000.0f;
+    if (turn_out < -3000.0f) turn_out = -3000.0f;
+
     return turn_out;
 }
 

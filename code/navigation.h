@@ -40,10 +40,10 @@ typedef struct {
 // 核心结构体 (删除了所有无关的 Flash 翻页变量)
 typedef struct{
        float Final_Out;     // [核心] 输出给转向环的偏差值
-       float Mileage_All;   // 当前累积里程 (用于判断是否走过 2cm)
+       double Mileage_All;   // 当前累积里程 (用于判断是否走过 2cm)
        // ★ 核心升级：增加小车的实时物理坐标
-       float Current_X;
-       float Current_Y;
+       double Current_X;
+       double Current_Y;
 	
        uint8 Nag_Stop_f;    // 结束标志 (1=跑完了)
        

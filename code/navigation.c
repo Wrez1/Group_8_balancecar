@@ -67,6 +67,9 @@ void Run_Nag_Save(void)
 }
 
 
+// 在函数外或函数内部定义静态变量记录上一时刻的增量
+static double Last_dx = 0.0;
+static double Last_dy = 0.0;
 // ========================================================
 // ★ 复现逻辑 (Repeat) - 纯跟踪算法 (2ms 高频丝滑版)
 // ========================================================
@@ -77,9 +80,16 @@ void Run_Nag_GPS(void)
     float current_step = step_pulses / (float)Nag_Set_mileage; // 1 step = 1 cm
     float yaw_rad = Nag_Yaw * PI / 180.0f;
     
-    N.Current_X += current_step * (-sinf(yaw_rad));
-    N.Current_Y += current_step * cosf(yaw_rad);
+	// 1. 计算当前时刻的瞬时位移向量
+    double current_dx = current_step * (-sinf(yaw_rad));
+    double current_dy = current_step * cosf(yaw_rad);
+	
+    N.Current_X += (current_dx + Last_dx) / 2.0;
+    N.Current_Y += (current_dy + Last_dy) / 2.0;
 
+	N.Current_X += (current_dx + Last_dx) / 2.0;
+    N.Current_Y += (current_dy + Last_dy) / 2.0;
+	
     // === 2. 终点停车判定 ===
     if(N.Save_index <= 10 || N.Run_index >= N.Save_index - 10) {
         N.Nag_Stop_f = 1; 
@@ -288,7 +298,7 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 
                 Turn_Target = Get_Minor_Arc(0.0f, Car_Attitude.Yaw) * 2.0f;
                 
-                if ((Auto_Drive_Distance > 95.0f && is_on_line) || Auto_Drive_Distance > 130.0f) {
+                if ((Auto_Drive_Distance > 98.0f && is_on_line) || Auto_Drive_Distance > 100.0f) {
                     Trigger_Beep(); 
                     Auto_Drive_State = 1; 
                     Auto_Drive_Distance = 0; 
@@ -304,7 +314,7 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                     // 负数代表右转，正数代表左转（请根据你的实际转向环方向修改正负号）
                     Turn_Target = -90.0f; 
                 }
-                if (Auto_Drive_Distance > 140.0f && !is_on_line) {
+                if (Auto_Drive_Distance > 130.0f && !is_on_line) {
                     Trigger_Beep();
                     Auto_Drive_State = 2; 
                     Auto_Drive_Distance = 0; 
@@ -312,7 +322,6 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 break;
                 
             case 2: 
-                // 分段调速：前 60cm 飙高速，60cm 后减速准备入弯
                 // 分段调速：前 60cm 飙高速，60cm 后减速准备入弯
                 if (Auto_Drive_Distance > 15 && Auto_Drive_Distance < 80.0f) {
                     SpeedPID.Target = 90.0f; // 【调参点】满血冲刺速度
@@ -327,7 +336,7 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 
                 Turn_Target = Get_Minor_Arc(180.0f, Car_Attitude.Yaw) * 2.0f; 
                 
-                if ((Auto_Drive_Distance > 95.0f && is_on_line) || Auto_Drive_Distance > 130.0f) {
+                if ((Auto_Drive_Distance > 95.0f && is_on_line) || Auto_Drive_Distance > 100.0f) {
                     Trigger_Beep(); 
                     Auto_Drive_State = 3; 
                     Auto_Drive_Distance = 0; 
@@ -341,7 +350,7 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                     // 这是左半圆，丢线时强行往左打死方向
                     Turn_Target = -90.0f; 
                 }
-                if (Auto_Drive_Distance > 140.0f && !is_on_line) {
+                if (Auto_Drive_Distance > 120.0f && !is_on_line) {
                     Trigger_Beep();
                     SpeedPID.Target = 0.0f;
                     Turn_Target = 0.0f;
@@ -366,43 +375,50 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 }
 				else if(Auto_Drive_Distance <= 15)
 				{
-					SpeedPID.Target = 80.0f;
+					SpeedPID.Target = 70.0f;
 				}
 				else {
-                    SpeedPID.Target = 50.0f;
-                }
-                // 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
-                Turn_Target = Get_Minor_Arc(-39.5f, Car_Attitude.Yaw) * 4.0f; 
+                    SpeedPID.Target = 70.0f;
+                } 
+				
+				if(Auto_Drive_Distance < 99.0f)
+				{
+					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
+					Turn_Target = (Loop_Count == 0 ? Get_Minor_Arc(-48.2f, Car_Attitude.Yaw) * 4.0f : Get_Minor_Arc(-54.0f, Car_Attitude.Yaw) * 4.0f);
+				}
+				else{
+					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
+                Turn_Target = Get_Minor_Arc(-31.0f, Car_Attitude.Yaw) * 4.0f;
+				}
                 
                 // 【调参点2：寻迹眼睁开时机】对角线较长，90cm睁眼比较安全
-                if ((Auto_Drive_Distance > 110.0f && is_on_line) || Auto_Drive_Distance > 145.0f) {
+                if ((Auto_Drive_Distance > 130.0f && is_on_line) || Auto_Drive_Distance > 149.0f) {
                     Trigger_Beep();
                     Auto_Drive_State = 1; Auto_Drive_Distance = 0; 
                 }
                 break;
                 
             case 1: // 阶段 1：C -> B 右半圆寻迹
-                if (Auto_Drive_Distance > 20 && Auto_Drive_Distance < 80.0f) {
-                    SpeedPID.Target = 70.0f; // 【调参点】满血冲刺速度
-                }
-				else if(Auto_Drive_Distance <= 20)
-				{
-					SpeedPID.Target = 50.0f;
-				}
-				else {
-                    SpeedPID.Target = 50.0f;
-                } // 弯道一定要稳！
-                
+         
+                SpeedPID.Target = 75.0f; // 弯道一定要稳！
+			
+                if (Auto_Drive_Distance < 15.0f) {
+                    Turn_Target = 60.0f; // 【调参点】暴力左转，硬把车头砸进赛道
+                }    
+			
                 if(is_on_line) {
                     Turn_Target = ir_out; 
-                } else {
-                    // 【调参点3：极其关键的防丢线保护】
-                    // 从对角线切入 C 点由于角度刁钻极易瞬间丢线。如果全白了，
-                    // 绝不能直走，必须强行给出一个极其猛烈的【右转】指令咬住黑线！
-                    Turn_Target = 70.0f; 
+                }
+				else {
+                    // 过了 15cm，车头已经顺过来了，睁开眼睛正常寻迹
+                    if(is_on_line) {
+                        Turn_Target = ir_out; 
+                    } else {
+                        Turn_Target = 50.0f; // 正常的防丢线保底
+                    }
                 }
                 
-                if (Auto_Drive_Distance > 160.0f && !is_on_line) {
+                if (Auto_Drive_Distance > 130.0f && !is_on_line) {
                     Trigger_Beep();
                     Auto_Drive_State = 2; Auto_Drive_Distance = 0; 
                 }
@@ -415,49 +431,56 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 }
 				else if(Auto_Drive_Distance <= 15)
 				{
-					SpeedPID.Target = 80.0f;
+					SpeedPID.Target = 70.0f;
 				}
 				else {
-                    SpeedPID.Target = 50.0f;
+                    SpeedPID.Target = 70.0f;
                 }
-                // 从 B 到 D 的绝对航向角是 141.4 度
-                Turn_Target = Get_Minor_Arc(219.0f, Car_Attitude.Yaw) * 4.0f; 
+				
+                if(Auto_Drive_Distance < 99.0f)
+				{
+					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
+                Turn_Target = (Loop_Count == 0 ? Get_Minor_Arc(231.5f, Car_Attitude.Yaw) * 4.0f : Get_Minor_Arc(233.0f, Car_Attitude.Yaw) * 4.0f);
+				}
+				else{
+					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
+                Turn_Target = Get_Minor_Arc(212.0f, Car_Attitude.Yaw) * 4.0f;
+				}
                 
-                if ((Auto_Drive_Distance > 110.0f && is_on_line) || Auto_Drive_Distance > 145.0f) {
+                if ((Auto_Drive_Distance > 130.0f && is_on_line) || Auto_Drive_Distance > 149.0f) {
                     Trigger_Beep();
                     Auto_Drive_State = 3; Auto_Drive_Distance = 0; 
                 }
                 break;
                 
             case 3: // 阶段 3：D -> A 左半圆寻迹
-               if (Auto_Drive_Distance > 20 && Auto_Drive_Distance < 80.0f) {
-                    SpeedPID.Target = 70.0f; // 【调参点】满血冲刺速度
-                }
-				else if(Auto_Drive_Distance <= 20)
-				{
-					SpeedPID.Target = 50.0f;
-				}
-				else {
-                    SpeedPID.Target = 50.0f;
-                } // 弯道一定要稳！ 
-                
+               SpeedPID.Target = 75.0f; // 弯道一定要稳！
+			
+                if (Auto_Drive_Distance < 15.0f) {
+                    Turn_Target = -60.0f; // 【调参点】暴力左转，硬把车头砸进赛道
+                }    
+			
                 if(is_on_line) {
                     Turn_Target = ir_out; 
-                } else {
-                    // D 到 A 是左弯，丢线时强行给【左转】指令捕捉黑线
-                    Turn_Target = -70.0f; 
+                }
+				else {
+                    // 过了 15cm，车头已经顺过来了，睁开眼睛正常寻迹
+                    if(is_on_line) {
+                        Turn_Target = ir_out; 
+                    } else {
+                        Turn_Target = -50.0f; // 正常的防丢线保底
+                    }
                 }
                 
-                if (Auto_Drive_Distance > 160.0f && !is_on_line) {
+                if (Auto_Drive_Distance > 140.0f && !is_on_line) {
                     Trigger_Beep();
-                    Auto_Drive_State = 0; Auto_Drive_Distance = 0; 
-                    
+                    Auto_Drive_State = 0; Auto_Drive_Distance = 0;
                     Loop_Count++;
                     if(Loop_Count >= 4) { // 跑完 4 圈
                         SpeedPID.Target = 0.0f;
                         Turn_Target = 0.0f;
                         Control_Mode = 0; // 停车断电
-                    }
+                    }					
                 }
                 break;
         }

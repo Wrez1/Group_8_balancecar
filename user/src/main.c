@@ -124,7 +124,7 @@ int main(void)
     // 2. 尝试从 Flash 读取参数
     if (flash_load() == 1) 
     {
-        // 读取成功！(Flash 里有有效数据)
+        // 读取成功！(Flash 里有效数据)
         // 可以在屏幕显示一下
          tft180_show_string(0, 0, "Flash Load OK!");
 		system_delay_ms(1000);
@@ -147,7 +147,7 @@ int main(void)
 	Init_Nag();
     // 4. 开启控制中断
     pit_ms_init(TIM1_PIT, 2); // 2ms 中断
-	pit_ms_init(TIM2_PIT, 10);
+	pit_ms_init(TIM2_PIT, 5);
 	tft180_clear();
 	while(1){
 		if (blue_mode_active) {
@@ -185,6 +185,27 @@ int main(void)
 //    
 //    //motor_control(190, 190);
 //    buzzer_init();
+//    return 0;
+//}
+
+//寻迹调试
+//int main() {
+//    clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
+//    debug_init();                                                              // 初始化默认 Debug UART
+//	sensor_init();
+//	tft180_init();
+//	while(1)
+//	{
+//		tft180_show_int(1,10, D1,2);
+//		tft180_show_int(1,20, D2,2);
+//		tft180_show_int(1,30, D3,2);
+//		tft180_show_int(1,40, D4,2);
+//		tft180_show_int(1,50, D5,2);
+//		tft180_show_int(1,60, D6,2);
+//		tft180_show_int(1,70, D7,2);
+//		tft180_show_int(1,80, D8,2);
+//	}
+//   
 //    return 0;
 //}
 

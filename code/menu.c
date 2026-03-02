@@ -703,11 +703,13 @@ void menu(uint8* xp, uint8* yp,
                 if (*yp == 2) {
                     blue_mode_active = 1;
 					Control_Mode = 0;
+					balance_mode_active = 1;
 					
-					// === 核心修改：切除速度环“记忆” ===
-                    SpeedPID.Ki = 0.0f;          // ★ 关掉积分！
-                    SpeedPID.ErrorIntMax = 0.0f; // 限幅也设为0，双重保险
-					SpeedPID.ErrorIntMin = 0.0f; // 限幅也设为0，双重保险
+					
+					// 清空摇杆历史残留指令
+                    SpeedPID.Target = 0.0f;
+                    extern float Turn_Target;
+                    Turn_Target = 0.0f;
 					
 					PID_Init(&SpeedPID);
                     PID_Init(&AnglePID);
