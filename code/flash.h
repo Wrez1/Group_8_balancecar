@@ -12,8 +12,8 @@ uint8_t flash_load(void);
 void flash_save_nag(void);
 uint8_t flash_load_nag(void);
 
-// ★★★ 新增：保存机械中值到Flash ★★★
-void flash_save_mech_zero(void);
-void flash_load_mech_zero(void);
+// ★★★ 保存与读取17个导航参数 ★★★
+void flash_save_nav_params(void);
+void flash_load_nav_params(void);
 
 #endif

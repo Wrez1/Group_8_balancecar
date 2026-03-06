@@ -7,8 +7,8 @@
 #define FLASH_PAGE_INDEX          (3)
 
 // === 机械中值存储区 ===
-#define MECH_ZERO_SECTION_INDEX   (127)
-#define MECH_ZERO_PAGE_INDEX      (2)    // 使用第2页存储机械中值
+#define NAV_PARAMS_SECTION_INDEX   (127)
+#define NAV_PARAMS_PAGE_INDEX      (2)    // 使用第2页存储机械中值
 
 // === 惯导数据存储区 (新配置) ===
 // 使用 Sector 123 到 126 (共8KB空间)
@@ -101,63 +101,56 @@ uint8_t flash_load(void)
     return 1; // 成功
 }
 
-// 保存机械中值
-void flash_save_mech_zero(void)
+void flash_save_nav_params(void)
 {
-    if(flash_check(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX)) 
-    {
-        flash_erase_page(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
-    }
+    // 挨个装填到联合体数组里
+    flash_union_buffer[0].float_type = max_straight_speed;
+    flash_union_buffer[1].float_type = min_corner_speed;
+    flash_union_buffer[2].float_type = finish_min_speed;
+    flash_union_buffer[3].float_type = m3_Speed_case0_max;
+    flash_union_buffer[4].float_type = m3_Speed_case0_start;
+    flash_union_buffer[5].float_type = m3_Speed_case0_end;
+    flash_union_buffer[6].float_type = m3_angle_case0_1;
+    flash_union_buffer[7].float_type = m3_angle_case0_2;
+    flash_union_buffer[8].float_type = m3_angle_case0_3;
+    flash_union_buffer[9].float_type = m3_Speed_case1;
+    flash_union_buffer[10].float_type = m3_Speed_case2_max;
+    flash_union_buffer[11].float_type = m3_Speed_case2_start;
+    flash_union_buffer[12].float_type = m3_Speed_case2_end;
+    flash_union_buffer[13].float_type = m3_angle_case2_1;
+    flash_union_buffer[14].float_type = m3_angle_case2_2;
+    flash_union_buffer[15].float_type = m3_angle_case2_3;
+    flash_union_buffer[16].float_type = m3_Speed_case3;
     
-    flash_buffer_clear();
-    
-    // 计算需要存储的float数量
-    // 我们存储一个float，但为了对齐和未来扩展，我们还是按float数组处理
-    int float_count = 1;  // 只存储机械中值一个float
-    
-    // 存储机械中值
-    flash_union_buffer[0].float_type = Mechanical_Zero_Pitch;
-    
-    // 添加校验标记（仿照PID存储方式，虽然PID没校验，但我们可以加一个）
-    // 使用0x5A5A5A5A作为校验标记
-    flash_union_buffer[1].uint32_type = 0x5A5A5A5A;
-    
-    // 可以存储一个版本号，方便以后扩展
-    flash_union_buffer[2].uint32_type = 0x00000001;  // 版本1
-    
-    flash_write_page_from_buffer(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+    // 执行擦除和写入（注意函数名一定要对齐你们原有的底层 flash 操作函数名）
+    flash_erase_page(NAV_PARAMS_SECTION_INDEX, NAV_PARAMS_PAGE_INDEX);
+    flash_write_page_from_buffer(NAV_PARAMS_SECTION_INDEX, NAV_PARAMS_PAGE_INDEX);
 }
 
-// 加载机械中值
-void flash_load_mech_zero(void)
+void flash_load_nav_params(void)
 {
-    // 默认值
-    float default_value = 0.0f;
+    flash_read_page_to_buffer(NAV_PARAMS_SECTION_INDEX, NAV_PARAMS_PAGE_INDEX);
     
-    // 读取Flash页面
-    flash_read_page_to_buffer(MECH_ZERO_SECTION_INDEX, MECH_ZERO_PAGE_INDEX);
+    // 防错：如果是空Flash (读出来是0xFFFFFFFF 或 NaN)，直接返回用默认值
+    if(flash_union_buffer[0].uint32_type == 0xFFFFFFFF) return;
     
-    // 检查校验标记
-    uint32_t check_mark = flash_union_buffer[1].uint32_type;
-    uint32_t version = flash_union_buffer[2].uint32_type;
-    
-    // 如果校验标记正确，版本为1，则加载数据
-    if(check_mark == 0x5A5A5A5A && version == 0x00000001)
-    {
-        // 加载机械中值
-        Mechanical_Zero_Pitch = flash_union_buffer[0].float_type;
-        // 打印调试信息（可选）
-        // printf("Loaded mech zero from flash: %f\n", Mechanical_Zero_Pitch);
-    }
-    else
-    {
-        // 校验失败，使用默认值
-        Mechanical_Zero_Pitch = default_value;
-        // 可选：保存默认值到Flash
-        // flash_save_mech_zero();
-    }
-    
-    flash_buffer_clear();
+    max_straight_speed   = flash_union_buffer[0].float_type;
+    min_corner_speed     = flash_union_buffer[1].float_type;
+    finish_min_speed     = flash_union_buffer[2].float_type;
+    m3_Speed_case0_max   = flash_union_buffer[3].float_type;
+    m3_Speed_case0_start = flash_union_buffer[4].float_type;
+    m3_Speed_case0_end   = flash_union_buffer[5].float_type;
+    m3_angle_case0_1     = flash_union_buffer[6].float_type;
+    m3_angle_case0_2     = flash_union_buffer[7].float_type;
+    m3_angle_case0_3     = flash_union_buffer[8].float_type;
+    m3_Speed_case1       = flash_union_buffer[9].float_type;
+    m3_Speed_case2_max   = flash_union_buffer[10].float_type;
+    m3_Speed_case2_start = flash_union_buffer[11].float_type;
+    m3_Speed_case2_end   = flash_union_buffer[12].float_type;
+    m3_angle_case2_1     = flash_union_buffer[13].float_type;
+    m3_angle_case2_2     = flash_union_buffer[14].float_type;
+    m3_angle_case2_3     = flash_union_buffer[15].float_type;
+    m3_Speed_case3       = flash_union_buffer[16].float_type;
 }
 
 // ----------------------------------------------------

@@ -67,9 +67,11 @@ void Run_Nag_Save(void)
 }
 
 
-// 在函数外或函数内部定义静态变量记录上一时刻的增量
-static double Last_dx = 0.0;
-static double Last_dy = 0.0;
+
+// 1. 核心参数设定
+float max_straight_speed = 100.0f; // 【参数】直道极限速度 (大胆往上提)
+float min_corner_speed   = 80.0f; // 【参数】最急的弯允许的最低速度
+float finish_min_speed   = 20.0f; // 【参数】终点冲线速度
 // ========================================================
 // ★ 复现逻辑 (Repeat) - 纯跟踪算法 (2ms 高频丝滑版)
 // ========================================================
@@ -80,16 +82,9 @@ void Run_Nag_GPS(void)
     float current_step = step_pulses / (float)Nag_Set_mileage; // 1 step = 1 cm
     float yaw_rad = Nag_Yaw * PI / 180.0f;
     
-	// 1. 计算当前时刻的瞬时位移向量
-    double current_dx = current_step * (-sinf(yaw_rad));
-    double current_dy = current_step * cosf(yaw_rad);
-	
-    N.Current_X += (current_dx + Last_dx) / 2.0;
-    N.Current_Y += (current_dy + Last_dy) / 2.0;
+    N.Current_X += current_step * (-sinf(yaw_rad));
+    N.Current_Y += current_step * cosf(yaw_rad);
 
-	N.Current_X += (current_dx + Last_dx) / 2.0;
-    N.Current_Y += (current_dy + Last_dy) / 2.0;
-	
     // === 2. 终点停车判定 ===
     if(N.Save_index <= 10 || N.Run_index >= N.Save_index - 10) {
         N.Nag_Stop_f = 1; 
@@ -174,11 +169,6 @@ void Run_Nag_GPS(void)
     // === 7. 纵向速度规划 ===
     if (N.Save_index > N.Run_index) 
     {
-        // 1. 核心参数设定
-        float max_straight_speed = 100.0f; // 【参数】直道极限速度 (大胆往上提)
-        float min_corner_speed   = 80.0f; // 【参数】最急的弯允许的最低速度
-        float finish_min_speed   = 20.0f; // 【参数】终点冲线速度
-        
         // 2. 弯道动态限速 (根据曲率计算)
         // 曲率越大(弯越急)，减速越多。50000.0f 是灵敏度系数，需根据实际曲率大小微调
         float abs_curv = fabsf(curvature);
@@ -220,6 +210,7 @@ void Run_Nag_GPS(void)
     }
 }
 
+
 // 主任务 (被 isr.c 调用)
 void Nag_System(void)
 {
@@ -259,6 +250,24 @@ float Get_Minor_Arc(float target_angle, float current_angle)
 volatile uint8_t Auto_Drive_State = 0;     
 volatile float Auto_Drive_Distance = 0.0f; 
 volatile uint8_t Loop_Count = 0;           
+
+float m3_Speed_case0_max = 90.0f;
+float m3_Speed_case0_start = 70.0f;
+float m3_Speed_case0_end = 70.0f;
+float m3_angle_case0_1 = -48.2f;
+float m3_angle_case0_2 = -54.0f;
+float m3_angle_case0_3 = -31.0f;
+
+float m3_Speed_case1 = 75.0f;
+
+float m3_Speed_case2_max = 90.0f;
+float m3_Speed_case2_start = 70.0f;
+float m3_Speed_case2_end = 70.0f;
+float m3_angle_case2_1 = 231.5f;
+float m3_angle_case2_2 = 232.5f;
+float m3_angle_case2_3 = 211.5f;
+
+float m3_Speed_case3 = 75.0f;
 
 void Run_Auto_Drive_Logic(uint8_t mode) 
 {
@@ -359,6 +368,7 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 break;
         }
     }
+	
     // ======================================
     // 模式 3：跑 8 字 (A -> C -> B -> D -> A)
     // ======================================
@@ -371,24 +381,24 @@ void Run_Auto_Drive_Logic(uint8_t mode)
             case 0: // 阶段 0：A -> C 对角线盲走
                 // 【调参点1：对角线分段变速】对角线总长约 128cm
                 if (Auto_Drive_Distance > 15 && Auto_Drive_Distance < 90.0f) {
-                    SpeedPID.Target = 90.0f; // 【调参点】满血冲刺速度
+                    SpeedPID.Target = m3_Speed_case0_max; // 【调参点】满血冲刺速度
                 }
 				else if(Auto_Drive_Distance <= 15)
 				{
-					SpeedPID.Target = 70.0f;
+					SpeedPID.Target = m3_Speed_case0_start;
 				}
 				else {
-                    SpeedPID.Target = 70.0f;
+                    SpeedPID.Target = m3_Speed_case0_end;
                 } 
 				
 				if(Auto_Drive_Distance < 99.0f)
 				{
 					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
-					Turn_Target = (Loop_Count == 0 ? Get_Minor_Arc(-48.2f, Car_Attitude.Yaw) * 4.0f : Get_Minor_Arc(-54.0f, Car_Attitude.Yaw) * 4.0f);
+					Turn_Target = (Loop_Count == 0 ? Get_Minor_Arc(m3_angle_case0_1, Car_Attitude.Yaw) * 4.0f : Get_Minor_Arc(m3_angle_case0_2, Car_Attitude.Yaw) * 4.0f);
 				}
 				else{
 					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
-                Turn_Target = Get_Minor_Arc(-31.0f, Car_Attitude.Yaw) * 4.0f;
+                Turn_Target = Get_Minor_Arc(m3_angle_case0_3, Car_Attitude.Yaw) * 4.0f;
 				}
                 
                 // 【调参点2：寻迹眼睁开时机】对角线较长，90cm睁眼比较安全
@@ -400,7 +410,7 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 
             case 1: // 阶段 1：C -> B 右半圆寻迹
          
-                SpeedPID.Target = 75.0f; // 弯道一定要稳！
+                SpeedPID.Target = m3_Speed_case1; // 弯道一定要稳！
 			
                 if (Auto_Drive_Distance < 15.0f) {
                     Turn_Target = 60.0f; // 【调参点】暴力左转，硬把车头砸进赛道
@@ -427,24 +437,24 @@ void Run_Auto_Drive_Logic(uint8_t mode)
             case 2: // 阶段 2：B -> D 对角线盲走
                 // 【调参点1：对角线分段变速】对角线总长约 128cm
                 if (Auto_Drive_Distance > 15 && Auto_Drive_Distance < 90.0f) {
-                    SpeedPID.Target = 90.0f; // 【调参点】满血冲刺速度
+                    SpeedPID.Target = m3_Speed_case2_max; // 【调参点】满血冲刺速度
                 }
 				else if(Auto_Drive_Distance <= 15)
 				{
-					SpeedPID.Target = 70.0f;
+					SpeedPID.Target = m3_Speed_case2_start;
 				}
 				else {
-                    SpeedPID.Target = 70.0f;
+                    SpeedPID.Target = m3_Speed_case2_end;
                 }
 				
                 if(Auto_Drive_Distance < 99.0f)
 				{
 					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
-                Turn_Target = (Loop_Count == 0 ? Get_Minor_Arc(231.5f, Car_Attitude.Yaw) * 4.0f : Get_Minor_Arc(233.0f, Car_Attitude.Yaw) * 4.0f);
+                Turn_Target = (Loop_Count == 0 ? Get_Minor_Arc(m3_angle_case2_1, Car_Attitude.Yaw) * 4.0f : Get_Minor_Arc(m3_angle_case2_2, Car_Attitude.Yaw) * 4.0f);
 				}
 				else{
 					// 锁定 38.6 度直走 (加上防死亡打转的 Get_Minor_Arc)
-                Turn_Target = Get_Minor_Arc(212.0f, Car_Attitude.Yaw) * 4.0f;
+                Turn_Target = Get_Minor_Arc(m3_angle_case2_3, Car_Attitude.Yaw) * 4.0f;
 				}
                 
                 if ((Auto_Drive_Distance > 130.0f && is_on_line) || Auto_Drive_Distance > 149.0f) {
@@ -454,7 +464,7 @@ void Run_Auto_Drive_Logic(uint8_t mode)
                 break;
                 
             case 3: // 阶段 3：D -> A 左半圆寻迹
-               SpeedPID.Target = 75.0f; // 弯道一定要稳！
+               SpeedPID.Target = m3_Speed_case3; // 弯道一定要稳！
 			
                 if (Auto_Drive_Distance < 15.0f) {
                     Turn_Target = -60.0f; // 【调参点】暴力左转，硬把车头砸进赛道

@@ -137,7 +137,6 @@ int main(void)
         
         tft180_show_string(0, 0, "Init Flash...");
         flash_save(); // 自动保存一次默认值
-        //flash_save_mech_zero(); // 顺便也存一下机械中值
         
         buzzer_on(1); 
         system_delay_ms(200); 
@@ -145,6 +144,8 @@ int main(void)
     }
 	
 	Init_Nag();
+	//flash_save_nav_params();
+	flash_load_nav_params();
     // 4. 开启控制中断
     pit_ms_init(TIM1_PIT, 2); // 2ms 中断
 	pit_ms_init(TIM2_PIT, 5);
@@ -188,7 +189,8 @@ int main(void)
 //    return 0;
 //}
 
-//寻迹调试
+
+////寻迹调试
 //int main() {
 //    clock_init(SYSTEM_CLOCK_120M);                                              // 初始化芯片时钟 工作频率为 120MHz
 //    debug_init();                                                              // 初始化默认 Debug UART
@@ -196,14 +198,47 @@ int main(void)
 //	tft180_init();
 //	while(1)
 //	{
-//		tft180_show_int(1,10, D1,2);
-//		tft180_show_int(1,20, D2,2);
-//		tft180_show_int(1,30, D3,2);
-//		tft180_show_int(1,40, D4,2);
-//		tft180_show_int(1,50, D5,2);
-//		tft180_show_int(1,60, D6,2);
-//		tft180_show_int(1,70, D7,2);
-//		tft180_show_int(1,80, D8,2);
+//		tft180_show_string(0,0,">");
+//		tft180_show_string(9,0,"max:");
+//		tft180_show_string(9,10,"cor:");
+//		tft180_show_string(9,20,"fin:");
+//		tft180_show_float(35,0, max_straight_speed,3,1);
+//		tft180_show_float(35,10, min_corner_speed,3,1);
+//		tft180_show_float(35,20, finish_min_speed,3,1);
+
+//		tft180_show_string(1,30,"SPEED:");
+//		tft180_show_string(1,40,"ma0:");
+//		tft180_show_string(1,50,"st0:");
+//		tft180_show_string(1,60,"en0:");
+//		tft180_show_string(1,70,"sp1:");
+//		tft180_show_string(1,80,"ma2:");
+//		tft180_show_string(1,90,"st2:");
+//		tft180_show_string(1,100,"en2:");
+//		tft180_show_string(1,110,"sp3:");
+//		tft180_show_float(25,40, m3_Speed_case0_max,3,1);
+//		tft180_show_float(25,50, m3_Speed_case0_start,3,1);
+//		tft180_show_float(25,60, m3_Speed_case0_end,3,1);
+//		tft180_show_float(25,70, m3_Speed_case1,3,1);
+//		tft180_show_float(25,80, m3_Speed_case2_max,3,1);
+//		tft180_show_float(25,90, m3_Speed_case2_start,3,1);
+//		tft180_show_float(25,100, m3_Speed_case2_end,3,1);
+//		tft180_show_float(25,110, m3_Speed_case3,3,1);
+//		
+//		tft180_show_string(71,20,">");
+//		tft180_show_string(80,10,"ANGLE:");
+//		tft180_show_string(80,20,"ca0_1:");
+//		tft180_show_string(70,30,"ca0_2:");
+//		tft180_show_string(70,40,"ca0_3:");
+//		tft180_show_string(70,50,"ca2_1:");
+//		tft180_show_string(70,60,"ca2_2:");
+//		tft180_show_string(70,70,"ca2_3:");
+//		tft180_show_float(120,20, m3_angle_case0_1,3,1);
+//		tft180_show_float(120,30, m3_angle_case0_2,3,1);
+//		tft180_show_float(120,40, m3_angle_case0_3,3,1);
+//		tft180_show_float(120,50, m3_angle_case2_1,3,1);
+//		tft180_show_float(120,60, m3_angle_case2_2,3,1);
+//		tft180_show_float(120,70, m3_angle_case2_3,3,1);
+//		
 //	}
 //   
 //    return 0;

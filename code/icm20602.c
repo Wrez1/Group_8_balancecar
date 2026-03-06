@@ -210,25 +210,15 @@ void IMU_Get_Data_Task(float dt)
     //Real_Gyro_Z = gz_deg;
 	
 	// ==============================================================
-    // ★★★ 4. 高精度梯形积分计算 Yaw (加入俯仰角投影补偿) ★★★
+    // ★★★ 4. 高精度梯形积分计算 Yaw ★★★
     // ==============================================================
+    // 【参数】陀螺仪比例因子。用于修复硬件转一圈但读数不是360度的问题。
+    // 如果转一圈 Yaw 读数小于 360，调大此值(如 1.005)；如果大于 360，调小(如 0.995)
     float Gyro_Scale_Factor = 1.002f; 
     
-    // 1. 获取当前车体俯仰角并转为弧度 
-    // (这里使用的是上个 2ms 周期解算出来的 Pitch，对于 500Hz 的频率来说完全足够精确)
-    float pitch_rad = Car_Attitude.Pitch * 0.0174533f; 
-    
-    // 2. 计算俯仰补偿系数
-    float cos_pitch = cosf(pitch_rad);
-    // 安全防线：防止车子彻底摔倒时(接近90度)导致除以近乎0的数，造成 Yaw 瞬间爆炸
-    if(cos_pitch < 0.5f) cos_pitch = 0.5f; 
-    
-    // 3. ★ 核心修正：将车体 Z 轴角速度，投影到真实的重力垂直轴上 ★
-    float true_yaw_rate = Gyro_Z_For_Nav / cos_pitch; 
-    
-    // 4. 使用投影后的真实水平角速度进行梯形积分
-    float integration_gyro = (true_yaw_rate + Last_Unfiltered_Gyro_Z) * 0.5f;
-    Last_Unfiltered_Gyro_Z = true_yaw_rate; // 记录本次历史值
+    // 梯形积分公式：(本次值 + 上次值) / 2 * dt (面积法，精度比矩形积分高一倍)
+    float integration_gyro = (Gyro_Z_For_Nav + Last_Unfiltered_Gyro_Z) * 0.5f;
+    Last_Unfiltered_Gyro_Z = Gyro_Z_For_Nav; // 记录本次历史值
     
     // dt = 0.002s (由 isr.c 传入)
     Car_Attitude.Yaw += integration_gyro * dt * Gyro_Scale_Factor;

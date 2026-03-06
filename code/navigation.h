@@ -40,10 +40,10 @@ typedef struct {
 // 核心结构体 (删除了所有无关的 Flash 翻页变量)
 typedef struct{
        float Final_Out;     // [核心] 输出给转向环的偏差值
-       double Mileage_All;   // 当前累积里程 (用于判断是否走过 2cm)
+       float Mileage_All;   // 当前累积里程 (用于判断是否走过 2cm)
        // ★ 核心升级：增加小车的实时物理坐标
-       double Current_X;
-       double Current_Y;
+       float Current_X;
+       float Current_Y;
 	
        uint8 Nag_Stop_f;    // 结束标志 (1=跑完了)
        
@@ -58,6 +58,30 @@ extern Nag N;
 
 // ★ 核心升级：大数组现在存的是包含(X,Y)的结构体
 extern PathPoint Nav_Record_Buffer[MaxSize];
+
+//惯导参数
+extern float max_straight_speed;
+extern float min_corner_speed;   
+extern float finish_min_speed;
+
+//模式3参数
+extern float m3_Speed_case0_max;
+extern float m3_Speed_case0_start;
+extern float m3_Speed_case0_end;
+extern float m3_angle_case0_1;
+extern float m3_angle_case0_2;
+extern float m3_angle_case0_3;
+ 
+extern float m3_Speed_case1;
+ 
+extern float m3_Speed_case2_max;
+extern float m3_Speed_case2_start;
+extern float m3_Speed_case2_end;
+extern float m3_angle_case2_1;
+extern float m3_angle_case2_2;
+extern float m3_angle_case2_3;
+ 
+extern float m3_Speed_case3;
 
 // 函数声明
 // 只保留这就够了，其他的 Run_Nag_Save 等函数只在 .c 内部使用，不需要暴露

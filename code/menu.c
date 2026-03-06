@@ -385,29 +385,57 @@ void showplace6(uint8 ring_sel, uint8 param_sel, uint8 che,
     }
 }
 
-void showplace7(uint8 che, float mech_zero) {
-    // 显示标题
-    tft180_show_string(0, 10, " MECHANICAL ZERO SET");
-    tft180_show_string(0, 30, "-------------------");
-    
-    // 显示当前机械中值
-    tft180_show_string(0, 50, "Current Value:");
-    tft180_show_float(80, 50, mech_zero, 5, 3);  // 显示5位，3位小数
-    tft180_show_string(0, 60, "                       ");
-    // 显示提示信息
-    tft180_show_string(0, 70, "Press KEY1/KEY2 to adjust");
-    
-    if(che == 0) {
-		tft180_show_string(0, 80, "                       ");
-        tft180_show_string(0, 90, "Press KEY3 to edit");
-		tft180_show_string(0, 100, "                       ");
-        tft180_show_string(0, 110, "Press KEY4 to save & exit");
-    } else {
-		tft180_show_string(0, 80, "                       ");
-        tft180_show_string(0, 90, "Editing...              ");
-		tft180_show_string(0, 100, "                       ");
-        tft180_show_string(0, 110, "Press KEY4 to save");
-    }
+// 将此函数直接放进 menu.c 中
+void showplace_nav_params(uint8_t cursor)
+{
+	tft180_show_string(9,0,"max:");
+	tft180_show_string(9,10,"cor:");
+	tft180_show_string(9,20,"fin:");
+	tft180_show_float(35,0, max_straight_speed,3,1);
+	tft180_show_float(35,10, min_corner_speed,3,1);
+	tft180_show_float(35,20, finish_min_speed,3,1);
+
+	tft180_show_string(9,30,"SPEED:");
+	tft180_show_string(9,40,"ma0:");
+	tft180_show_string(9,50,"st0:");
+	tft180_show_string(9,60,"en0:");
+	tft180_show_string(9,70,"sp1:");
+	tft180_show_string(9,80,"ma2:");
+	tft180_show_string(9,90,"st2:");
+	tft180_show_string(9,100,"en2:");
+	tft180_show_string(9,110,"sp3:");
+	tft180_show_float(35,40, m3_Speed_case0_max,3,1);
+	tft180_show_float(35,50, m3_Speed_case0_start,3,1);
+	tft180_show_float(35,60, m3_Speed_case0_end,3,1);
+	tft180_show_float(35,70, m3_Speed_case1,3,1);
+	tft180_show_float(35,80, m3_Speed_case2_max,3,1);
+	tft180_show_float(35,90, m3_Speed_case2_start,3,1);
+	tft180_show_float(35,100, m3_Speed_case2_end,3,1);
+	tft180_show_float(35,110, m3_Speed_case3,3,1);
+	
+	tft180_show_string(80,10,"ANGLE:");
+	tft180_show_string(80,20,"ca0_1:");
+	tft180_show_string(80,30,"ca0_2:");
+	tft180_show_string(80,40,"ca0_3:");
+	tft180_show_string(80,50,"ca2_1:");
+	tft180_show_string(80,60,"ca2_2:");
+	tft180_show_string(80,70,"ca2_3:");
+	tft180_show_float(120,20, m3_angle_case0_1,3,1);
+	tft180_show_float(120,30, m3_angle_case0_2,3,1);
+	tft180_show_float(120,40, m3_angle_case0_3,3,1);
+	tft180_show_float(120,50, m3_angle_case2_1,3,1);
+	tft180_show_float(120,60, m3_angle_case2_2,3,1);
+	tft180_show_float(120,70, m3_angle_case2_3,3,1);
+	
+	tft180_show_string(0, 0,  (cursor==1) ?">":" "); tft180_show_string(0, 10, (cursor==2) ?">":" ");
+    tft180_show_string(0, 20, (cursor==3) ?">":" "); tft180_show_string(0, 40, (cursor==4) ?">":" ");
+    tft180_show_string(0, 50, (cursor==5) ?">":" "); tft180_show_string(0, 60, (cursor==6) ?">":" ");
+    tft180_show_string(0, 70, (cursor==7) ?">":" "); tft180_show_string(0, 80, (cursor==8) ?">":" ");
+    tft180_show_string(0, 90, (cursor==9) ?">":" "); tft180_show_string(0, 100,(cursor==10)?">":" ");
+    tft180_show_string(0, 110,(cursor==11)?">":" ");
+    tft180_show_string(71, 20, (cursor==12)?">":" "); tft180_show_string(71, 30, (cursor==13)?">":" ");
+    tft180_show_string(71, 40, (cursor==14)?">":" "); tft180_show_string(71, 50, (cursor==15)?">":" ");
+    tft180_show_string(71, 60, (cursor==16)?">":" "); tft180_show_string(71, 70, (cursor==17)?">":" ");
 }
 
 // 全局变量：编辑模式标志
@@ -423,7 +451,7 @@ void menu(uint8* xp, uint8* yp,
     
     static uint8 ring_sel = 1;  // 当前选择的环：1-角度环，2-速度环，3-转向环
     static uint8 param_sel = 1; // 当前选择的参数：1-KP，2-KI，3-KD
-    static uint8 mech_zero_edit = 0;
+    static uint8_t nav_cursor = 0; // 0代表非编辑模式，1~17代表正在编辑对应的参数
 			  
     if(*yp == 0) {  // 主菜单
 		// ==========================================================
@@ -452,6 +480,7 @@ void menu(uint8* xp, uint8* yp,
         }
         if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
             *yp += 1;
+			tft180_clear();
             key_clear_state(KEY_3);
         }
         
@@ -817,39 +846,86 @@ void menu(uint8* xp, uint8* yp,
             showplace6(ring_sel, param_sel, che, angle_pid, speed_pid, turn_pid);
         }
         else if(*xp == 7) {  // ★★★ 新增：机械中值设置 ★★★
-            if(mech_zero_edit == 0) {  // 非编辑模式
-                // 显示机械中值设置界面
-                showplace7(mech_zero_edit, *mech_zero);  // ★★★ 正确使用mech_zero ★★★
+            if(nav_cursor == 0) {  // 【非编辑模式】
+                // 显示设置界面（传0代表隐藏光标）
+                showplace_nav_params(0);  
+                
                 // KEY3: 进入编辑模式
                 if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
-                    mech_zero_edit = 1;
+                    nav_cursor = 1; // 激活光标，默认指向第1个参数
                     key_clear_state(KEY_3);
                 }
                 // KEY4: 保存并返回主菜单
                 if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
-                    flash_save_mech_zero();  // 保存到Flash
+                    flash_save_nav_params();  // 退出前保存一次（以防万一）
                     *yp = 0;  // 返回主菜单
+					tft180_clear();
                     key_clear_state(KEY_4);
                 }
             }
-            else {  // 编辑模式
-                // 显示编辑界面
-                showplace7(mech_zero_edit, *mech_zero);  // ★★★ 正确使用mech_zero ★★★
+            else {  // 【编辑模式】
+                // 显示编辑界面，带上当前动态光标
+                showplace_nav_params(nav_cursor);  
                 
-                // KEY1: 增加机械中值
+                // KEY1: 增加当前选中的参数 (+0.5)
                 if(key_get_state(KEY_1) == KEY_SHORT_PRESS) {
-                    *mech_zero += 0.01f;  // 每次增加0.01
+                    switch(nav_cursor) {
+                        case 1:  max_straight_speed   += 0.5f; break;
+                        case 2:  min_corner_speed     += 0.5f; break;
+                        case 3:  finish_min_speed     += 0.5f; break;
+                        case 4:  m3_Speed_case0_max   += 0.5f; break;
+                        case 5:  m3_Speed_case0_start += 0.5f; break;
+                        case 6:  m3_Speed_case0_end   += 0.5f; break;
+                        case 7:  m3_Speed_case1       += 0.5f; break;
+                        case 8:  m3_Speed_case2_max   += 0.5f; break;
+                        case 9:  m3_Speed_case2_start += 0.5f; break;
+                        case 10: m3_Speed_case2_end   += 0.5f; break;
+                        case 11: m3_Speed_case3       += 0.5f; break;
+                        case 12: m3_angle_case0_1     += 0.5f; break;
+                        case 13: m3_angle_case0_2     += 0.5f; break;
+                        case 14: m3_angle_case0_3     += 0.5f; break;
+                        case 15: m3_angle_case2_1     += 0.5f; break;
+                        case 16: m3_angle_case2_2     += 0.5f; break;
+                        case 17: m3_angle_case2_3     += 0.5f; break;
+                    }
                     key_clear_state(KEY_1);
                 }
-                // KEY2: 减少机械中值
+                
+                // KEY2: 减少当前选中的参数 (-0.5)
                 if(key_get_state(KEY_2) == KEY_SHORT_PRESS) {
-                    *mech_zero -= 0.01f;  // 每次减少0.01
+                    switch(nav_cursor) {
+                        case 1:  max_straight_speed   -= 0.5f; break;
+                        case 2:  min_corner_speed     -= 0.5f; break;
+                        case 3:  finish_min_speed     -= 0.5f; break;
+                        case 4:  m3_Speed_case0_max   -= 0.5f; break;
+                        case 5:  m3_Speed_case0_start -= 0.5f; break;
+                        case 6:  m3_Speed_case0_end   -= 0.5f; break;
+                        case 7:  m3_Speed_case1       -= 0.5f; break;
+                        case 8:  m3_Speed_case2_max   -= 0.5f; break;
+                        case 9:  m3_Speed_case2_start -= 0.5f; break;
+                        case 10: m3_Speed_case2_end   -= 0.5f; break;
+                        case 11: m3_Speed_case3       -= 0.5f; break;
+                        case 12: m3_angle_case0_1     -= 0.5f; break;
+                        case 13: m3_angle_case0_2     -= 0.5f; break;
+                        case 14: m3_angle_case0_3     -= 0.5f; break;
+                        case 15: m3_angle_case2_1     -= 0.5f; break;
+                        case 16: m3_angle_case2_2     -= 0.5f; break;
+                        case 17: m3_angle_case2_3     -= 0.5f; break;
+                    }
                     key_clear_state(KEY_2);
                 }
+                
+                // KEY3: 切换参数 (1~17 循环)
+                if(key_get_state(KEY_3) == KEY_SHORT_PRESS) {
+                    nav_cursor++;
+                    if(nav_cursor > 17) nav_cursor = 1; 
+                    key_clear_state(KEY_3);
+                }
+                
                 // KEY4: 保存并退出编辑模式
                 if(key_get_state(KEY_4) == KEY_SHORT_PRESS) {
-                    flash_save_mech_zero();  // 保存到Flash
-                    mech_zero_edit = 0;  // 退出编辑模式
+					flash_save_nav_params();
+                    nav_cursor = 0;					// 回到非编辑模式
                     key_clear_state(KEY_4);
                 }
             }
